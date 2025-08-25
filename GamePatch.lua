@@ -18,6 +18,8 @@ local Camera = SaMemory.camera
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("dkjson")
+local socket = require("socket")
+local ssl = require("ssl")
 
 local function loadLibrary(libName, optionalMessage)
     local success, lib = pcall(require, libName)
@@ -29,31 +31,122 @@ end
 
 local sc = loadLibrary 'supericon' 
 
+---------------------- [ cfg ]----------------------
+local inicfg = require("inicfg")
+local directIni  = "GamePatch.ini"
+local ini = inicfg.load({
+	settings = {
+        theme = 0
+	}
+}, directIni )
+inicfg.save(ini, directIni)
+
+function save()
+    inicfg.save(ini, directIni)
+end
+
+local sw, sh = getScreenResolution()
+
+local new = imgui.new
+local windowState = new.bool(false)
+local filters = new.bool(false)
+
+  ---------------------- [FFI]----------------------
+ffi.cdef[[
+    void _Z12AND_OpenLinkPKc(const char* link);
+]]
+
+---------------------- [Function main]----------------------
+function main()
+	local fileName = getWorkingDirectory() .. "/GamePatch.lua"
+	
+	if fileExists(fileName) then
+		print("cargado correctamente")
+	else
+		print("No renombres el mod")
+		thisScript():unload()
+	end
+    repeat wait(0) until isSampAvailable()
+    
+   while true do
+        if isWidgetSwipedRight(WIDGET_RADAR) then
+            windowState[0] = not windowState[0]
+        end
+        wait(0)
+    end
+	
+end
 
 local repoFiles = {}
-local currentTab = "todo" -- por defecto mostrar todo
 
-function refreshRepoFiles(tab)
-    currentTab = tab or currentTab
+-- etiquetas con estado + colores
+local etiquetas = {
+    Legal = {
+        activo = false,
+        colorOff = imgui.ImVec4(0.4, 0.2, 0.5, 0.5), -- púrpura opaco
+        colorOn  = imgui.ImVec4(0.7, 0.3, 0.9, 0.9), -- púrpura vivo
+    },
+    Ilegal = {
+        activo = false,
+        colorOff = imgui.ImVec4(0.5, 0.2, 0.2, 0.5), -- rojo opaco
+        colorOn  = imgui.ImVec4(0.9, 0.3, 0.3, 0.9), -- rojo vivo
+    }
+}
 
+-- dibuja etiquetas y refresca lista al cambiar
+function DrawEtiquetas()
+    imgui.Text("Etiquetas")
+    imgui.Spacing()
+
+    local colorTextoOff = imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
+    local colorTextoOn  = imgui.ImVec4(1, 1, 1, 1)
+
+    for nombre, data in pairs(etiquetas) do
+        if data.activo then
+            imgui.PushStyleColor(imgui.Col.Button, data.colorOn)
+            imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOn)
+            imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOn)
+            imgui.PushStyleColor(imgui.Col.Text, colorTextoOn)
+        else
+            imgui.PushStyleColor(imgui.Col.Button, data.colorOff)
+            imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOff)
+            imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOff)
+            imgui.PushStyleColor(imgui.Col.Text, colorTextoOff)
+        end
+
+        if imgui.Button(nombre, imgui.ImVec2(80, 30)) then
+            data.activo = not data.activo
+            lua_thread.create(function() refreshRepoFiles() end)
+        end
+        imgui.PopStyleColor(4)
+
+        imgui.SameLine()
+    end
+end
+
+-- obtiene lista según etiquetas activas
+function refreshRepoFiles()
     local urls = {}
-    if currentTab == "todo" then
-        -- Pedir ambas carpetas
+
+    if etiquetas.Legal.activo then
+        table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal")
+    end
+    if etiquetas.Ilegal.activo then
+        table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
+    end
+
+    -- si no hay etiquetas activas → mostrar todo
+    if #urls == 0 then
         urls = {
             "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
             "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal"
         }
-    elseif currentTab == "legal" then
-        urls = { "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal" }
-    elseif currentTab == "ilegal" then
-        urls = { "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal" }
     end
 
     repoFiles = {}
 
     for _, url in ipairs(urls) do
         local body, code = https.request(url)
-
         if code == 200 then
             local data, _, err = json.decode(body, 1, nil)
             if not err then
@@ -68,10 +161,14 @@ function refreshRepoFiles(tab)
         end
     end
 
-    print("[Downloader] ✅ Lista (" .. currentTab .. ") actualizada con " .. tostring(#repoFiles) .. " archivos")
+    print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
 end
-local socket = require("socket")
-local ssl = require("ssl")
+
+-- refresco inicial automático al arrancar
+lua_thread.create(function()
+    refreshRepoFiles()
+end)
+
 
 function downloadFile(url, filename)
     local savePath = getWorkingDirectory() .. "/" .. filename
@@ -134,90 +231,39 @@ function downloadFile(url, filename)
     return true
 end
 
-
--- UI modificada con barra de progreso
 function renderDownloaderUI()
-    if imgui.CollapsingHeader(" Descargas disponibles") then
-        if imgui.Button("Todo") then
-            lua_thread.create(function() refreshRepoFiles("todo") end)
-        end
-        imgui.SameLine()
-        if imgui.Button("Legales") then
-            lua_thread.create(function() refreshRepoFiles("legal") end)
-        end
-        imgui.SameLine()
-        if imgui.Button("Ilegales") then
-            lua_thread.create(function() refreshRepoFiles("ilegal") end)
-        end
-        imgui.SameLine()
-        if imgui.Button(" Actualizar lista") then
-            lua_thread.create(function() refreshRepoFiles() end)
-        end
+    -- etiquetas arriba
 
+    imgui.Separator()
+
+    -- solo dejamos Filter y Actualizar
+    if imgui.Button(fa.FILTER) then
+        filters[0] = not filters[0]
+    end
+    imgui.SameLine()
+    if imgui.Button(" Actualizar lista") then
+        lua_thread.create(function() refreshRepoFiles() end)
+    end
+
+    imgui.Separator()
+
+    -- lista de archivos
+    for _, f in ipairs(repoFiles) do
+        if imgui.Button(f.name) then
+            lua_thread.create(function()
+                downloadFile(f.url, f.name)
+            end)
+        end
+    end
+
+    -- barra de progreso
+    if isDownloading then
         imgui.Separator()
-
-        -- Lista de archivos
-        for _, f in ipairs(repoFiles) do
-            if imgui.Button(f.name) then
-                lua_thread.create(function()
-                    downloadFile(f.url, f.name)
-                end)
-            end
-        end
-
-        -- Mostrar barra de progreso si está descargando
-        if isDownloading then
-            imgui.Separator()
-            imgui.Text("Descargando: " .. currentDownload)
-            imgui.ProgressBar(downloadProgress, imgui.ImVec2(300, 20))
-        end
+        imgui.Text("Descargando: " .. currentDownload)
+        imgui.ProgressBar(downloadProgress, imgui.ImVec2(300, 20))
     end
 end
 
----------------------- [ cfg ]----------------------
-local inicfg = require("inicfg")
-local directIni  = "GamePatch.ini"
-local ini = inicfg.load({
-	settings = {
-        theme = 0
-	}
-}, directIni )
-inicfg.save(ini, directIni)
-
-function save()
-    inicfg.save(ini, directIni)
-end
-
-local sw, sh = getScreenResolution()
-
-local new = imgui.new
-local windowState = new.bool(false)
-
-  ---------------------- [FFI]----------------------
-ffi.cdef[[
-    void _Z12AND_OpenLinkPKc(const char* link);
-]]
-
----------------------- [Function main]----------------------
-function main()
-	local fileName = getWorkingDirectory() .. "/GamePatch.lua"
-	
-	if fileExists(fileName) then
-		print("cargado correctamente")
-	else
-		print("No renombres el mod")
-		thisScript():unload()
-	end
-    repeat wait(0) until isSampAvailable()
-    
-   while true do
-        if isWidgetSwipedRight(WIDGET_RADAR) then
-            windowState[0] = not windowState[0]
-        end
-        wait(0)
-    end
-	
-end
 
 local MainMenu = imgui.OnFrame(
     function() return windowState[0] end,
@@ -239,7 +285,7 @@ local MainMenu = imgui.OnFrame(
         local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
         imgui.PushStyleColor(imgui.Col.Text, bgColor)
         imgui.PushFont(logofont)
-        imgui.Text('GamePatch ')
+        imgui.Text('GamePatch ')
         imgui.PopStyleColor()
         imgui.PopFont()
         imgui.PushFont(font1)
@@ -254,6 +300,41 @@ local MainMenu = imgui.OnFrame(
         
         renderDownloaderUI()
         
+        imgui.PopFont()
+        imgui.EndChild()
+        imgui.End()
+        imgui.PopStyleVar()
+    end
+)
+
+local filtersFrame = imgui.OnFrame(
+    function() return filters[0] end,
+
+    function(self)
+        imgui.SetNextWindowSize(imgui.ImVec2(222, 158), imgui.Cond.FirstUseEver)
+        imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0, 0))
+        imgui.Begin("##filters", filters, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
+        local windowSize = imgui.GetWindowSize()
+
+        imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 43, 10))
+        imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 1.0, 1.0, 1))
+        addons.CloseButton("##closemenu", filters, 33, 5)
+        imgui.PopStyleColor()
+
+        imgui.SetCursorPos(imgui.ImVec2(15, 15)) 
+        imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
+
+        local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
+        imgui.PushStyleColor(imgui.Col.Text, bgColor)
+        imgui.PushFont(logofont)
+        imgui.CenterText('Buscar filtros')
+        imgui.PopStyleColor()
+        imgui.PopFont()
+        imgui.PushFont(font1)
+        imgui.Spacing()
+   
+        DrawEtiquetas()
+
         imgui.PopFont()
         imgui.EndChild()
         imgui.End()
@@ -383,6 +464,10 @@ function drawTriangle(p1, p2, p3, color, thickness)
     drawList:AddRect(p1, p2, imgui.GetColorU32Vec4(imgui.ImVec4(0.0, 0.0, 0.0, 1.0)), 0, 0, thickness)
 end
 
+function imgui.CenterText(text)
+    imgui.SetCursorPosX(imgui.GetWindowSize().x / 2 - imgui.CalcTextSize(tostring(text)).x / 2)
+    imgui.Text(text)
+end
 
 ---------------------- [FONTS]----------------------
 local function loadSCFont(size, merge)
