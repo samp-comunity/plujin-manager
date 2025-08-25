@@ -38,94 +38,7 @@ local imgui = require('mimgui')
 local faicons = require('fAwesome6')
 local cfg = require('jsoncfg')
 
-local https = require("ssl.https")
-local ltn12 = require("ltn12")
-
 -- pretty printing (https://stackoverflow.com/questions/9168058/how-to-dump-a-table-to-console)
-
-local repoFiles = {}
-local json = require("dkjson")
-
-function refreshRepoFiles()
-    local url = "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal"
-    local body, code = https.request(url)
-
-    if code ~= 200 then
-        print("[Downloader] ❌ Error al obtener lista: " .. tostring(code))
-        return
-    end
-
-    local data, _, err = json.decode(body, 1, nil)
-    if err then
-        print("[Downloader] ❌ Error parseando JSON: " .. tostring(err))
-        return
-    end
-
-    repoFiles = {}
-    for _, item in ipairs(data) do
-        if item.type == "file" and item.name:match("%.lua$") then
-            table.insert(repoFiles, { name = item.name, url = item.download_url })
-        end
-    end
-
-    print("[Downloader] ✅ Lista actualizada (" .. tostring(#repoFiles) .. " archivos)")
-end
-
--- Llamamos al inicio para tener la lista cargada
-refreshRepoFiles()
-
-function renderDownloaderUI()
-    if imgui.CollapsingHeader("📥 Descargas disponibles") then
-        
-        -- Botón para refrescar la lista desde GitHub
-        if imgui.Button("🔄 Actualizar lista") then
-            lua_thread.create(function()
-                refreshRepoFiles()
-            end)
-        end
-
-        imgui.Separator()
-
-        -- Dibujar un botón por cada archivo
-        for _, f in ipairs(repoFiles) do
-            if imgui.Button(f.name) then
-                lua_thread.create(function()
-                    downloadFile(f.url, f.name)
-                end)
-            end
-        end
-    end
-end
-
-function downloadFile(url, filename)
-    local savePath = getWorkingDirectory() .. "/" .. filename
-
-    print("[Downloader] savePath = " .. tostring(savePath))
-
-    local file = io.open(savePath, "wb")
-    if not file then
-        print("[Downloader] ❌ No se pudo abrir el archivo para escribir")
-        return false
-    end
-    print("[Downloader] Archivo abierto correctamente, iniciando request...")
-
-    local body, code, headers, status = https.request{
-        url = url,
-        sink = ltn12.sink.file(file)
-    }
-
-    print("[Downloader] body=" .. tostring(body))
-    print("[Downloader] code=" .. tostring(code))
-    print("[Downloader] status=" .. tostring(status))
-
-    if code == 200 then
-        print("[Downloader] ✅ Descarga completada en: " .. savePath)
-        return true
-    else
-        print("[Downloader] ❌ Error HTTP: " .. tostring(code))
-        return false
-    end
-end
 
 function prettyPrintTable(node)
   local cache, stack, output = {},{},{}
@@ -921,26 +834,7 @@ imgui.OnFrame(
         end
         imgui.EndTabItem()
       end
-
-      if imgui.BeginTabItem('Descargas') then
-        imgui.Text("Aquí puedes descargar archivos desde GitHub")
-
-        if imgui.Button("Descargar MinecraftHud.lua") then
-            lua_thread.create(function()
-                print("[Downloader] >>> Iniciando descarga <<<")
-                local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/scripts/legal/MinecraftHud.lua"
-                downloadFile(url, "MinecraftHud.lua")
-                print("[Downloader] >>> Hilo de descarga finalizado <<<")
-            end)
-        end
-
-        renderDownloaderUI()
-
-        imgui.EndTabItem()
-      end
-
-
-      
+ 
       imgui.EndTabBar()
       wasInLog = didLogRender
       wasInShell = didShellRender

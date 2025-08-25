@@ -15,6 +15,10 @@ local SaMemory = require("SAMemory")
 SaMemory.require("CCamera")
 local Camera = SaMemory.camera
 
+local https = require("ssl.https")
+local ltn12 = require("ltn12")
+local json = require("dkjson")
+
 local function loadLibrary(libName, optionalMessage)
     local success, lib = pcall(require, libName)
     if not success then
@@ -25,26 +29,157 @@ end
 
 local sc = loadLibrary 'supericon' 
 
+
+local repoFiles = {}
+local currentTab = "todo" -- por defecto mostrar todo
+
+function refreshRepoFiles(tab)
+    currentTab = tab or currentTab
+
+    local urls = {}
+    if currentTab == "todo" then
+        -- Pedir ambas carpetas
+        urls = {
+            "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
+            "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal"
+        }
+    elseif currentTab == "legal" then
+        urls = { "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal" }
+    elseif currentTab == "ilegal" then
+        urls = { "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal" }
+    end
+
+    repoFiles = {}
+
+    for _, url in ipairs(urls) do
+        local body, code = https.request(url)
+
+        if code == 200 then
+            local data, _, err = json.decode(body, 1, nil)
+            if not err then
+                for _, item in ipairs(data) do
+                    if item.type == "file" and item.name:match("%.lua$") then
+                        table.insert(repoFiles, { name = item.name, url = item.download_url })
+                    end
+                end
+            end
+        else
+            print("[Downloader] ❌ Error al obtener lista: " .. tostring(code))
+        end
+    end
+
+    print("[Downloader] ✅ Lista (" .. currentTab .. ") actualizada con " .. tostring(#repoFiles) .. " archivos")
+end
+local socket = require("socket")
+local ssl = require("ssl")
+
+function downloadFile(url, filename)
+    local savePath = getWorkingDirectory() .. "/" .. filename
+    local file = io.open(savePath, "wb")
+    if not file then
+        print("[Downloader] ❌ No se pudo abrir el archivo para escribir")
+        return false
+    end
+
+    -- separar host y ruta
+    local host, path = url:match("https://([^/]+)(/.+)")
+    local tcp = assert(socket.tcp())
+    tcp:connect(host, 443)
+    tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
+    tcp:dohandshake()
+
+    -- mandar request manual
+    tcp:send("GET " .. path .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\n\r\n")
+
+    isDownloading = true
+    currentDownload = filename
+    downloadProgress = 0.0
+
+    local data = ""
+    local headers_done = false
+    local totalSize, received = 0, 0
+
+    while true do
+        local chunk, status, partial = tcp:receive(1024)
+        local buff = chunk or partial
+        if buff and #buff > 0 then
+            if not headers_done then
+                data = data .. buff
+                local header_end = data:find("\r\n\r\n", 1, true)
+                if header_end then
+                    local headers = data:sub(1, header_end)
+                    totalSize = tonumber(headers:match("Content%-Length: (%d+)")) or 0
+                    file:write(data:sub(header_end+4))
+                    received = #data - (header_end+4)
+                    headers_done = true
+                end
+            else
+                file:write(buff)
+                received = received + #buff
+            end
+            if totalSize > 0 then
+                downloadProgress = received / totalSize
+            end
+        end
+        if status == "closed" then break end
+        wait(0) -- 👉 importante, no congela la pantalla
+    end
+
+    file:close()
+    tcp:close()
+
+    isDownloading = false
+    downloadProgress = 1.0
+    print("[Downloader] ✅ Descarga terminada: " .. savePath)
+    return true
+end
+
+
+-- UI modificada con barra de progreso
+function renderDownloaderUI()
+    if imgui.CollapsingHeader(" Descargas disponibles") then
+        if imgui.Button("Todo") then
+            lua_thread.create(function() refreshRepoFiles("todo") end)
+        end
+        imgui.SameLine()
+        if imgui.Button("Legales") then
+            lua_thread.create(function() refreshRepoFiles("legal") end)
+        end
+        imgui.SameLine()
+        if imgui.Button("Ilegales") then
+            lua_thread.create(function() refreshRepoFiles("ilegal") end)
+        end
+        imgui.SameLine()
+        if imgui.Button(" Actualizar lista") then
+            lua_thread.create(function() refreshRepoFiles() end)
+        end
+
+        imgui.Separator()
+
+        -- Lista de archivos
+        for _, f in ipairs(repoFiles) do
+            if imgui.Button(f.name) then
+                lua_thread.create(function()
+                    downloadFile(f.url, f.name)
+                end)
+            end
+        end
+
+        -- Mostrar barra de progreso si está descargando
+        if isDownloading then
+            imgui.Separator()
+            imgui.Text("Descargando: " .. currentDownload)
+            imgui.ProgressBar(downloadProgress, imgui.ImVec2(300, 20))
+        end
+    end
+end
+
 ---------------------- [ cfg ]----------------------
 local inicfg = require("inicfg")
-local directIni  = "keyboard.ini"
+local directIni  = "GamePatch.ini"
 local ini = inicfg.load({
-    windowState = {
-        theme = 0,
-        anim = true,
-    },
-	keyboard = {
-		active = true,
-        scale = 1,
-        mode = 0,
-        x = 400,
-		y = 500
-	},
-    mouse = {
-		active = true,
-		x = 400,
-		y = 320,
-        scale = 1
+	settings = {
+        theme = 0
 	}
 }, directIni )
 inicfg.save(ini, directIni)
@@ -104,13 +239,22 @@ local MainMenu = imgui.OnFrame(
         local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
         imgui.PushStyleColor(imgui.Col.Text, bgColor)
         imgui.PushFont(logofont)
-        imgui.Text('Fake Keyboard ')
+        imgui.Text('GamePatch ')
         imgui.PopStyleColor()
         imgui.PopFont()
+        imgui.PushFont(font1)
+        imgui.Spacing()
+        if imgui.Button(fa.REPEAT.. "##reload", imgui.ImVec2(40, 30)) then
+            thisScript():reload()
+        end
         imgui.Spacing()
         imgui.Spacing()
 
-
+        imgui.Text("Aquí puedes descargar archivos desde GitHub")
+        
+        renderDownloaderUI()
+        
+        imgui.PopFont()
         imgui.EndChild()
         imgui.End()
         imgui.PopStyleVar()
