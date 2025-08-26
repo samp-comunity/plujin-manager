@@ -176,7 +176,7 @@ function printScriptKeyboard()
     if code == 200 and body then
         local data, _, err = json.decode(body, 1, nil)
         if not err and type(data) == "table" and data.mods then
-            local index = 2  -- Keyboard.lua está en la posición 2
+            local index = 3  -- Keyboard.lua está en la posición 2
             local mod = data.mods[index]
             if mod then
                 print("📌 Script #" .. index)
