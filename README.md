@@ -23,7 +23,7 @@ To use Plujin Marketplace:
   - Description
   - Author
   - Download count
-- Automatic JSON metadata generation for all mods
+- Automatic JSON metadata generation for all <mods>
 - Supports adding images/icons for each mod
 - Filter mods by tags or category
 
@@ -32,6 +32,5 @@ To use Plujin Marketplace:
 ## Credits
 
 - Project owner and main developer: \_vxnzz
-- Contributors: You can add other developers or mod creators here
 
 ---

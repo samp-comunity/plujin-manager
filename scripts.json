@@ -1,0 +1,52 @@
+{
+  "mods": [
+    {
+      "name": "GameFixer.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/GameFixer.lua",
+      "tags": ["legal"]
+    },
+    {
+      "name": "Keyboard.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/Keyboard.lua",
+      "tags": ["legal"]
+    },
+    {
+      "name": "MinecraftHud.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/MinecraftHud.lua",
+      "tags": ["legal"]
+    },
+    {
+      "name": "Script_Manager.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/Script_Manager.lua",
+      "tags": ["legal"]
+    },
+    {
+      "name": "anims.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/anims.lua",
+      "tags": ["legal"]
+    },
+    {
+      "name": "bind.lua",
+      "description": "",
+      "author": "",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/bind.lua",
+      "tags": ["legal"]
+    }
+  ]
+}
