@@ -169,6 +169,42 @@ lua_thread.create(function()
     refreshRepoFiles()
 end)
 
+function printScriptKeyboard()
+    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
+    local body, code = https.request(url)
+
+    if code == 200 and body then
+        local data, _, err = json.decode(body, 1, nil)
+        if not err and type(data) == "table" and data.mods then
+            local index = 2  -- Keyboard.lua está en la posición 2
+            local mod = data.mods[index]
+            if mod then
+                print("📌 Script #" .. index)
+                print("Nombre: " .. tostring(mod.name))
+                print("Descripción: " .. tostring(mod.description))
+                print("Autor: " .. tostring(mod.author))
+                print("URL: " .. tostring(mod.url))
+                print("Tags: " .. table.concat(mod.tags or {}, ", "))
+            else
+                print("⚠️ No existe el índice " .. index)
+            end
+        else
+            print("❌ Error al decodificar JSON o no existe 'mods'")
+        end
+    else
+        print("❌ Error al obtener JSON, code: " .. tostring(code))
+    end
+end
+
+
+ lua_thread.create(function()
+        while true do
+            printScriptKeyboard()   -- imprime los datos
+            wait(5000)          -- espera 5000 ms = 5 segundos
+        end
+    end)
+
+
 
 function downloadFile(url, filename)
     local savePath = getWorkingDirectory() .. "/" .. filename
