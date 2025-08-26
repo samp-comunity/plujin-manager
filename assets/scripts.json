@@ -10,15 +10,15 @@
     },
     {
       "name": "Keyboard.lua",
-      "description": "Lameme el neme",
-      "author": "",
+      "description": "Muestra un teclado en pantalla configurable estilo PC",
+      "author": "_vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/Keyboard.lua",
       "tags": ["legal"]
     },
     {
       "name": "MinecraftHud.lua",
-      "description": "",
+      "description": "Como su nombre lo indica muestra un hud visual estilo como el de Minecraft",
       "author": "",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/MinecraftHud.lua",
