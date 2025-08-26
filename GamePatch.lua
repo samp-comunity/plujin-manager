@@ -77,23 +77,49 @@ function main()
 	
 end
 
+local selectedFile = nil
+local showInfoWindow = new.bool(false) -- usar ImGui bool
+
 local repoFiles = {}
+local scriptsInfo = {} -- datos extra desde scripts.json
+
+-- cargar info de scripts.json al inicio
+function loadScriptsInfo()
+    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
+    local body, code = https.request(url)
+    if code == 200 and body then
+        local data, _, err = json.decode(body, 1, nil)
+        if not err and type(data) == "table" and data.mods then
+            for _, mod in ipairs(data.mods) do
+                scriptsInfo[mod.name] = mod
+            end
+            print("[Downloader] ✅ Datos extra cargados de scripts.json")
+        else
+            print("[Downloader] ❌ Error al decodificar scripts.json")
+        end
+    else
+        print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
+    end
+end
+
+lua_thread.create(function()
+    loadScriptsInfo()
+end)
 
 -- etiquetas con estado + colores
 local etiquetas = {
     Legal = {
         activo = false,
-        colorOff = imgui.ImVec4(0.4, 0.2, 0.5, 0.5), -- púrpura opaco
-        colorOn  = imgui.ImVec4(0.7, 0.3, 0.9, 0.9), -- púrpura vivo
+        colorOff = imgui.ImVec4(0.4, 0.2, 0.5, 0.5),
+        colorOn  = imgui.ImVec4(0.7, 0.3, 0.9, 0.9),
     },
     Ilegal = {
         activo = false,
-        colorOff = imgui.ImVec4(0.5, 0.2, 0.2, 0.5), -- rojo opaco
-        colorOn  = imgui.ImVec4(0.9, 0.3, 0.3, 0.9), -- rojo vivo
+        colorOff = imgui.ImVec4(0.5, 0.2, 0.2, 0.5),
+        colorOn  = imgui.ImVec4(0.9, 0.3, 0.3, 0.9),
     }
 }
 
--- dibuja etiquetas y refresca lista al cambiar
 function DrawEtiquetas()
     imgui.Text("Etiquetas")
     imgui.Spacing()
@@ -135,7 +161,6 @@ function refreshRepoFiles()
         table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
     end
 
-    -- si no hay etiquetas activas → mostrar todo
     if #urls == 0 then
         urls = {
             "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
@@ -164,47 +189,9 @@ function refreshRepoFiles()
     print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
 end
 
--- refresco inicial automático al arrancar
 lua_thread.create(function()
     refreshRepoFiles()
 end)
-
-function printScriptKeyboard()
-    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
-    local body, code = https.request(url)
-
-    if code == 200 and body then
-        local data, _, err = json.decode(body, 1, nil)
-        if not err and type(data) == "table" and data.mods then
-            local index = 3  -- Keyboard.lua está en la posición 2
-            local mod = data.mods[index]
-            if mod then
-                print("📌 Script #" .. index)
-                print("Nombre: " .. tostring(mod.name))
-                print("Descripción: " .. tostring(mod.description))
-                print("Autor: " .. tostring(mod.author))
-                print("URL: " .. tostring(mod.url))
-                print("Tags: " .. table.concat(mod.tags or {}, ", "))
-            else
-                print("⚠️ No existe el índice " .. index)
-            end
-        else
-            print("❌ Error al decodificar JSON o no existe 'mods'")
-        end
-    else
-        print("❌ Error al obtener JSON, code: " .. tostring(code))
-    end
-end
-
-
- lua_thread.create(function()
-        while true do
-            printScriptKeyboard()   -- imprime los datos
-            wait(5000)          -- espera 5000 ms = 5 segundos
-        end
-    end)
-
-
 
 function downloadFile(url, filename)
     local savePath = getWorkingDirectory() .. "/" .. filename
@@ -214,14 +201,12 @@ function downloadFile(url, filename)
         return false
     end
 
-    -- separar host y ruta
     local host, path = url:match("https://([^/]+)(/.+)")
     local tcp = assert(socket.tcp())
     tcp:connect(host, 443)
     tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
     tcp:dohandshake()
 
-    -- mandar request manual
     tcp:send("GET " .. path .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\n\r\n")
 
     isDownloading = true
@@ -255,7 +240,7 @@ function downloadFile(url, filename)
             end
         end
         if status == "closed" then break end
-        wait(0) -- 👉 importante, no congela la pantalla
+        wait(0)
     end
 
     file:close()
@@ -268,11 +253,8 @@ function downloadFile(url, filename)
 end
 
 function renderDownloaderUI()
-    -- etiquetas arriba
-
     imgui.Separator()
 
-    -- solo dejamos Filter y Actualizar
     if imgui.Button(fa.FILTER) then
         filters[0] = not filters[0]
     end
@@ -283,16 +265,14 @@ function renderDownloaderUI()
 
     imgui.Separator()
 
-    -- lista de archivos
     for _, f in ipairs(repoFiles) do
-        if imgui.Button(f.name) then
-            lua_thread.create(function()
-                downloadFile(f.url, f.name)
-            end)
+        local displayName = f.name:gsub("%.lua$", "")
+        if imgui.Button(displayName) then
+            selectedFile = f
+            showInfoWindow[0] = true
         end
     end
 
-    -- barra de progreso
     if isDownloading then
         imgui.Separator()
         imgui.Text("Descargando: " .. currentDownload)
@@ -300,6 +280,52 @@ function renderDownloaderUI()
     end
 end
 
+-- Ventana de información del script
+local infoFrame = imgui.OnFrame(
+    function() return showInfoWindow[0] end,
+    function(self)
+        imgui.SetNextWindowSize(imgui.ImVec2(400, 260), imgui.Cond.FirstUseEver)
+        imgui.Begin("Información del script", showInfoWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
+        local windowSize = imgui.GetWindowSize()
+
+        imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 46, 10))
+        imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 1.0, 1.0, 1))
+        addons.CloseButton("##closemenu", showInfoWindow, 36, 15)
+        imgui.PopStyleColor()
+
+
+        imgui.SetCursorPos(imgui.ImVec2(15, 15)) 
+        imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
+
+            if selectedFile then
+                local displayName = selectedFile.name:gsub("%.lua$", "")
+                local extra = scriptsInfo[selectedFile.name] -- datos extra del JSON
+                imgui.PushFont(font1)
+                imgui.Text(fa.FILE_CODE .. " Nombre: " .. displayName)
+
+                if extra then
+                    imgui.Text(fa.USER .." Autor: " .. (extra.author or "Desconocido"))
+                    imgui.TextWrapped(fa.FILE_LINES .." " .. (extra.description or "Sin descripción"))
+                else
+                    imgui.TextWrapped(fa.FILE_LINES .." No hay información adicional")
+                end
+
+                imgui.Separator()
+
+                if imgui.Button(fa.DOWNLOAD .." Instalar") then
+                    lua_thread.create(function()
+                        downloadFile(selectedFile.url, selectedFile.name)
+                    end)
+                    showInfoWindow[0] = false
+                end
+
+                imgui.PopFont()
+            imgui.EndChild()
+        end
+
+        imgui.End()
+    end
+)
 
 local MainMenu = imgui.OnFrame(
     function() return windowState[0] end,
@@ -310,9 +336,9 @@ local MainMenu = imgui.OnFrame(
         imgui.Begin("##windowState", windowState, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
         local windowSize = imgui.GetWindowSize()
 
-        imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 43, 10))
+        imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 46, 10))
         imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 1.0, 1.0, 1))
-        addons.CloseButton("##closemenu", windowState, 33, 5)
+        addons.CloseButton("##closemenu", windowState, 36, 15)
         imgui.PopStyleColor()
 
         imgui.SetCursorPos(imgui.ImVec2(15, 15)) 
