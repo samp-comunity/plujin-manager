@@ -153,8 +153,8 @@ function DrawEtiquetas()
         imgui.SameLine()
     end
 end
-
 local isRefreshing = false
+repoFiles = {}
 
 function refreshRepoFiles()
     isRefreshing = true
@@ -163,6 +163,7 @@ function refreshRepoFiles()
     lua_thread.create(function()
         local urls = {}
 
+        -- 🔹 comprobar etiquetas activas
         if etiquetas.Legal.activo then
             table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal")
         end
@@ -170,6 +171,7 @@ function refreshRepoFiles()
             table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
         end
 
+        -- 🔑 si no hay ninguna activa → cargar ambas rutas
         if #urls == 0 then
             urls = {
                 "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
@@ -177,6 +179,7 @@ function refreshRepoFiles()
             }
         end
 
+        -- 🔹 recorrer todas las URLs seleccionadas
         for _, url in ipairs(urls) do
             local host, path = url:match("https://([^/]+)(/.+)")
             local tcp = assert(socket.tcp())
@@ -203,11 +206,13 @@ function refreshRepoFiles()
                     end
                 end
                 if status == "closed" then break end
-                wait(0) -- 🔑 libera el frame mientras descarga
             end
             tcp:close()
 
-            -- 🔽 procesar JSON en lotes
+            -- 🔑 espera mínima para no congelar
+            wait(0)
+
+            -- 🔹 procesar JSON de GitHub
             if body ~= "" then
                 local decoded, _, err = json.decode(body, 1, nil)
                 if not err then
@@ -215,12 +220,9 @@ function refreshRepoFiles()
                         if item.type == "file" and item.name:match("%.lua$") then
                             table.insert(repoFiles, { name = item.name, url = item.download_url })
                         end
-                        if i % 20 == 0 then
-                            wait(0) -- 🔑 cada 20 archivos liberamos un frame
-                        end
+                        if i % 20 == 0 then wait(0) end
                     end
                 end
-                wait(0) -- 🔑 deja respirar después de cada JSON
             end
         end
 
@@ -228,6 +230,12 @@ function refreshRepoFiles()
         isRefreshing = false
     end)
 end
+
+-- 🔹 llamada inicial: al iniciar el script siempre actualiza la lista
+lua_thread.create(function()
+    wait(2000) -- espera 2s a que todo cargue
+    refreshRepoFiles()
+end)
 
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
@@ -298,7 +306,7 @@ function downloadFile(url, filename)
     print("[Downloader] ✅ Descarga terminada: " .. savePath)
     return true
 end
-
+-- renderDownloaderUI con cuadritos y botón "Descargar" en azul
 function renderDownloaderUI()
     imgui.Separator()
 
@@ -307,22 +315,67 @@ function renderDownloaderUI()
     end
     imgui.SameLine()
     if imgui.Button(" Actualizar lista") then
-        refreshRepoFiles() -- ahora refreshRepoFiles ya maneja su propio lua_thread
+        refreshRepoFiles()
     end
 
     imgui.Separator()
 
-    -- 🔽 Mostrar spinner mientras se refresca
     if isRefreshing then
-        Spinner("##refreshspinner", 12, 2.5, imgui.ImVec4(1,1,1,1))
-        imgui.SameLine()
-        imgui.Text(" Cargando lista...")
+        local winSize = imgui.GetWindowSize()
+        local cursorPos = imgui.GetCursorPos()
+        local availableHeight = winSize.y - cursorPos.y
+
+        local spinnerSize = 36
+        local spinnerThickness = 5
+        local centerX = (winSize.x / 2) - (spinnerSize / 2)
+        local centerY = cursorPos.y + (availableHeight / 2) - (spinnerSize / 2)
+
+        imgui.SetCursorPos(imgui.ImVec2(centerX, centerY))
+        Spinner("##refreshspinner", spinnerSize, spinnerThickness, imgui.ImVec4(1, 1, 1, 1))
     else
+        -- Mostrar mods en cuadritos tipo grid
+        local itemWidth = 150
+        local itemHeight = 100
+        local spacing = 15
+        local winSize = imgui.GetWindowSize()
+        local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
+
+        local col = 0
         for _, f in ipairs(repoFiles) do
-            local displayName = f.name:gsub("%.lua$", "")
-            if imgui.Button(displayName) then
-                selectedFile = f
-                showInfoWindow[0] = true
+            imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
+
+                local displayName = f.name:gsub("%.lua$", "")
+                imgui.CenterText(displayName)
+                imgui.Spacing()
+
+                -- Verificar si el archivo ya existe en local
+                local savePath = getWorkingDirectory() .. "/" .. f.name
+                local isInstalled = fileExists(savePath)
+                local label = isInstalled and "Ver info" or "Descargar"
+
+                if not isInstalled then
+                    -- Botón azul para "Descargar"
+                    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))         -- normal
+                    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0)) -- hover
+                    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))  -- presionado
+                end
+
+                if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(-1, 30)) then
+                    selectedFile = f
+                    showInfoWindow[0] = true
+                end
+
+                if not isInstalled then
+                    imgui.PopStyleColor(3) -- restaurar colores
+                end
+
+            imgui.EndChild()
+
+            col = col + 1
+            if col < maxCols then
+                imgui.SameLine()
+            else
+                col = 0
             end
         end
     end
@@ -344,20 +397,18 @@ function renderDownloaderUI()
         imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
         imgui.Text("Reiniciar ahora")
         if imgui.IsItemClicked(0) then
-            -- reiniciar todos los acumulados
             for _, filename in ipairs(installedPending) do
                 local path = getWorkingDirectory() .. "/" .. filename
                 script.load(path)
             end
-            installedPending = {} -- limpiar lista después de reiniciar
+            installedPending = {}
             showRestartPrompt = false
         end
         imgui.PopStyleColor()
     end
 end
 
--- 🔽 función auxiliar para verificar si el archivo ya existe localmente y si coincide con GitHub
--- 🔽 cache de estados, para no recalcular en cada frame
+
 local scriptStatusCache = {}
 
 function checkScriptRemote(file, callback)
@@ -533,9 +584,6 @@ local infoFrame = imgui.OnFrame(
         imgui.End()
     end
 )
-
-
-
 
 local MainMenu = imgui.OnFrame(
     function() return windowState[0] end,
