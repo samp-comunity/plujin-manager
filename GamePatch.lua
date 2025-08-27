@@ -76,7 +76,6 @@ function main()
     end
 	
 end
-
 local selectedFile = nil
 local showInfoWindow = new.bool(false) -- usar ImGui bool
 
@@ -87,43 +86,48 @@ local scriptsInfo = {} -- datos extra desde scripts.json
 local showRestartPrompt = false
 local lastDownloaded = nil
 
--- cargar info de scripts.json al inicio
-function loadScriptsInfo()
-    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
-    local body, code = https.request(url)
-    if code == 200 and body then
-        local data, _, err = json.decode(body, 1, nil)
-        if not err and type(data) == "table" and data.mods then
-            for _, mod in ipairs(data.mods) do
-                scriptsInfo[mod.name] = mod
-            end
-            print("[Downloader] ✅ Datos extra cargados de scripts.json")
-        else
-            print("[Downloader] ❌ Error al decodificar scripts.json")
-        end
-    else
-        print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
-    end
-end
-
-lua_thread.create(function()
-    loadScriptsInfo()
-end)
-
--- etiquetas con estado + colores
+-- 🔹 etiquetas iniciales (fallback mientras carga JSON)
 local etiquetas = {
-    Legal = {
+    ["Cargando..."] = {
         activo = false,
-        colorOff = imgui.ImVec4(0.4, 0.2, 0.5, 0.5),
-        colorOn  = imgui.ImVec4(0.7, 0.3, 0.9, 0.9),
-    },
-    Ilegal = {
-        activo = false,
-        colorOff = imgui.ImVec4(0.5, 0.2, 0.2, 0.5),
-        colorOn  = imgui.ImVec4(0.9, 0.3, 0.3, 0.9),
+        colorOff = imgui.ImVec4(0.3, 0.3, 0.3, 0.5),
+        colorOn  = imgui.ImVec4(0.6, 0.6, 0.6, 0.9),
     }
 }
 
+-- 🔹 construir dinámicamente etiquetas desde scripts.json
+function buildEtiquetas()
+    etiquetas = {}
+    local found = false
+    for _, info in pairs(scriptsInfo) do
+        if info.tags and type(info.tags) == "table" then
+            for _, tag in ipairs(info.tags) do
+                if not etiquetas[tag] then
+                    etiquetas[tag] = {
+                        activo = false,
+                        colorOff = imgui.ImVec4(0.4, 0.4, 0.4, 0.5),
+                        colorOn  = imgui.ImVec4(0.2, 0.8, 0.2, 0.9),
+                    }
+                end
+                found = true
+            end
+        end
+    end
+    -- si el JSON no tenía etiquetas → dejar dummy
+    if not found then
+        etiquetas["Sin etiquetas"] = {
+            activo = false,
+            colorOff = imgui.ImVec4(0.3, 0.3, 0.3, 0.5),
+            colorOn  = imgui.ImVec4(0.6, 0.6, 0.6, 0.9),
+        }
+    end
+end
+
+-- cargar info de scripts.json al inicio
+
+
+
+-- 🔹 dibujar etiquetas dinámicas
 function DrawEtiquetas()
     imgui.Text("Etiquetas")
     imgui.Spacing()
@@ -149,10 +153,10 @@ function DrawEtiquetas()
             lua_thread.create(function() refreshRepoFiles() end)
         end
         imgui.PopStyleColor(4)
-
         imgui.SameLine()
     end
 end
+
 local isRefreshing = false
 repoFiles = {}
 
@@ -161,69 +165,36 @@ function refreshRepoFiles()
     repoFiles = {}
 
     lua_thread.create(function()
-        local urls = {}
+        -- 🔹 scriptsInfo ya tiene los mods desde el JSON
+        for name, info in pairs(scriptsInfo) do
+            local include = true
 
-        -- 🔹 comprobar etiquetas activas
-        if etiquetas.Legal.activo then
-            table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal")
-        end
-        if etiquetas.Ilegal.activo then
-            table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
-        end
+            -- 🔑 verificar si hay filtros activos
+            local hayFiltros = false
+            for _, data in pairs(etiquetas) do
+                if data.activo then
+                    hayFiltros = true
+                    break
+                end
+            end
 
-        -- 🔑 si no hay ninguna activa → cargar ambas rutas
-        if #urls == 0 then
-            urls = {
-                "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
-                "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal"
-            }
-        end
-
-        -- 🔹 recorrer todas las URLs seleccionadas
-        for _, url in ipairs(urls) do
-            local host, path = url:match("https://([^/]+)(/.+)")
-            local tcp = assert(socket.tcp())
-            tcp:connect(host, 443)
-            tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
-            tcp:dohandshake()
-
-            tcp:send("GET " .. path .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\nUser-Agent: Lua\r\n\r\n")
-
-            local data, headers_done, body = "", false, ""
-            while true do
-                local chunk, status, partial = tcp:receive(1024)
-                local buff = chunk or partial
-                if buff and #buff > 0 then
-                    data = data .. buff
-                    if not headers_done then
-                        local header_end = data:find("\r\n\r\n", 1, true)
-                        if header_end then
-                            headers_done = true
-                            body = data:sub(header_end+4)
+            if hayFiltros then
+                include = false
+                if info.tags and type(info.tags) == "table" then
+                    for _, tag in ipairs(info.tags) do
+                        if etiquetas[tag] and etiquetas[tag].activo then
+                            include = true
+                            break
                         end
-                    else
-                        body = body .. buff
                     end
                 end
-                if status == "closed" then break end
             end
-            tcp:close()
 
-            -- 🔑 espera mínima para no congelar
+            -- si pasa filtros → agregar
+            if include then
+                table.insert(repoFiles, { name = name, url = info.url })
+            end
             wait(0)
-
-            -- 🔹 procesar JSON de GitHub
-            if body ~= "" then
-                local decoded, _, err = json.decode(body, 1, nil)
-                if not err then
-                    for i, item in ipairs(decoded) do
-                        if item.type == "file" and item.name:match("%.lua$") then
-                            table.insert(repoFiles, { name = item.name, url = item.download_url })
-                        end
-                        if i % 20 == 0 then wait(0) end
-                    end
-                end
-            end
         end
 
         print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
@@ -236,6 +207,30 @@ lua_thread.create(function()
     wait(2000) -- espera 2s a que todo cargue
     refreshRepoFiles()
 end)
+
+function loadScriptsInfo()
+    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
+    local body, code = https.request(url)
+    if code == 200 and body then
+        local data, _, err = json.decode(body, 1, nil)
+        if not err and type(data) == "table" and data.mods then
+            for _, mod in ipairs(data.mods) do
+                scriptsInfo[mod.name] = mod
+            end
+            print("[Downloader] ✅ Datos extra cargados de scripts.json")
+        else
+            print("[Downloader] ❌ Error al decodificar scripts.json")
+        end
+    else
+        print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
+    end
+    buildEtiquetas()
+    refreshRepoFiles()
+end
+lua_thread.create(function()
+    loadScriptsInfo()
+end)
+
 
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
