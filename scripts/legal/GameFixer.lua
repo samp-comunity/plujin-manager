@@ -1,6 +1,6 @@
 ﻿script_name = "[GameFixer]"
 script_author = "_vxnzz"
-script_version = "1.1"
+script_version = "1.2"
 --==================================== 
 
 local imgui = require("mimgui")

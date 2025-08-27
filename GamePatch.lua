@@ -83,6 +83,10 @@ local showInfoWindow = new.bool(false) -- usar ImGui bool
 local repoFiles = {}
 local scriptsInfo = {} -- datos extra desde scripts.json
 
+-- 🔽 estados nuevos para el prompt de reinicio
+local showRestartPrompt = false
+local lastDownloaded = nil
+
 -- cargar info de scripts.json al inicio
 function loadScriptsInfo()
     local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
@@ -193,6 +197,9 @@ lua_thread.create(function()
     refreshRepoFiles()
 end)
 
+-- 🔽 en vez de solo uno, usamos lista acumulativa
+local installedPending = {}
+
 function downloadFile(url, filename)
     local savePath = getWorkingDirectory() .. "/" .. filename
     local file = io.open(savePath, "wb")
@@ -248,6 +255,11 @@ function downloadFile(url, filename)
 
     isDownloading = false
     downloadProgress = 1.0
+
+    -- 🔽 en vez de 1 archivo, acumulamos varios
+    table.insert(installedPending, filename)
+    showRestartPrompt = true
+
     print("[Downloader] ✅ Descarga terminada: " .. savePath)
     return true
 end
@@ -278,7 +290,71 @@ function renderDownloaderUI()
         imgui.Text("Descargando: " .. currentDownload)
         imgui.ProgressBar(downloadProgress, imgui.ImVec2(300, 20))
     end
+
+    if showRestartPrompt and #installedPending > 0 then
+        imgui.Separator()
+        imgui.Text("Instalados:")
+        for _, name in ipairs(installedPending) do
+            imgui.BulletText(name)
+        end
+
+        imgui.Separator()
+        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
+        imgui.Text("Reiniciar ahora")
+        if imgui.IsItemClicked(0) then
+            -- reiniciar todos los acumulados
+            for _, filename in ipairs(installedPending) do
+                local path = getWorkingDirectory() .. "/" .. filename
+                script.load(path)
+            end
+            installedPending = {} -- limpiar lista después de reiniciar
+            showRestartPrompt = false
+        end
+        imgui.PopStyleColor()
+    end
 end
+-- 🔽 función auxiliar para verificar si el archivo ya existe localmente y si coincide con GitHub
+-- 🔽 cache de estados, para no recalcular en cada frame
+local scriptStatusCache = {}
+
+-- 🔽 función auxiliar para verificar si el archivo ya existe localmente y si coincide con GitHub
+local function computeScriptStatus(file)
+    local path = getWorkingDirectory() .. "/" .. file.name
+    local f = io.open(path, "rb")
+    if not f then
+        return "missing" -- no instalado
+    end
+
+    local localContent = f:read("*a")
+    f:close()
+
+    -- pedir el archivo remoto directamente (una sola vez)
+    local body, code = https.request(file.url)
+    if code == 200 and body then
+        if body == localContent then
+            return "same" -- instalado y actualizado
+        else
+            return "different" -- instalado pero distinto (hay update)
+        end
+    end
+
+    return "unknown"
+end
+
+-- 🔽 función pública: devuelve el estado cacheado o lo calcula solo 1 vez
+local function getScriptStatus(file)
+    if not file then return "unknown" end
+    if not scriptStatusCache[file.name] then
+        scriptStatusCache[file.name] = computeScriptStatus(file)
+    end
+    return scriptStatusCache[file.name]
+end
+
+-- 🔽 limpiar cache cuando refrescamos lista o instalamos algo
+local function clearStatusCache()
+    scriptStatusCache = {}
+end
+
 
 -- Ventana de información del script
 local infoFrame = imgui.OnFrame(
@@ -293,13 +369,12 @@ local infoFrame = imgui.OnFrame(
         addons.CloseButton("##closemenu", showInfoWindow, 36, 15)
         imgui.PopStyleColor()
 
-
         imgui.SetCursorPos(imgui.ImVec2(15, 15)) 
         imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
 
             if selectedFile then
                 local displayName = selectedFile.name:gsub("%.lua$", "")
-                local extra = scriptsInfo[selectedFile.name] -- datos extra del JSON
+                local extra = scriptsInfo[selectedFile.name]
                 imgui.PushFont(font1)
                 imgui.Text(fa.FILE_CODE .. " Nombre: " .. displayName)
 
@@ -312,11 +387,26 @@ local infoFrame = imgui.OnFrame(
 
                 imgui.Separator()
 
-                if imgui.Button(fa.DOWNLOAD .." Instalar") then
-                    lua_thread.create(function()
-                        downloadFile(selectedFile.url, selectedFile.name)
-                    end)
-                    showInfoWindow[0] = false
+                -- 👇 Nuevo sistema de estado
+                local status = getScriptStatus(selectedFile)
+                if status == "same" then
+                    imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
+                    imgui.Text(fa.CHECK .. " Instalado")
+                    imgui.PopStyleColor()
+                elseif status == "different" then
+                    if imgui.Button(fa.UPLOAD .. " Actualizar") then
+                        lua_thread.create(function()
+                            downloadFile(selectedFile.url, selectedFile.name)
+                        end)
+                        showInfoWindow[0] = false
+                    end
+                else -- missing o unknown
+                    if imgui.Button(fa.DOWNLOAD .. " Instalar") then
+                        lua_thread.create(function()
+                            downloadFile(selectedFile.url, selectedFile.name)
+                        end)
+                        showInfoWindow[0] = false
+                    end
                 end
 
                 imgui.PopFont()
@@ -326,6 +416,9 @@ local infoFrame = imgui.OnFrame(
         imgui.End()
     end
 )
+
+
+
 
 local MainMenu = imgui.OnFrame(
     function() return windowState[0] end,
