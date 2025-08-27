@@ -95,7 +95,26 @@ local etiquetas = {
     }
 }
 
--- 🔹 construir dinámicamente etiquetas desde scripts.json
+-- 🎨 paleta de colores por etiqueta
+local coloresEtiquetas = {
+    legal = {
+        off = imgui.ImVec4(0.2, 0.4, 0.8, 0.3), -- azul opaco
+        on  = imgui.ImVec4(0.2, 0.6, 1.0, 0.9), -- azul brillante
+    },
+    utilidad = {
+        off = imgui.ImVec4(0.2, 0.6, 0.2, 0.3), -- verde opaco
+        on  = imgui.ImVec4(0.2, 0.9, 0.2, 0.9), -- verde brillante
+    },
+    visual = {
+        off = imgui.ImVec4(0.5, 0.2, 0.7, 0.3), -- morado opaco
+        on  = imgui.ImVec4(0.8, 0.4, 1.0, 0.9), -- morado brillante
+    },
+    sonido = {
+        off = imgui.ImVec4(0.6, 0.4, 0.2, 0.3), -- marrón opaco
+        on  = imgui.ImVec4(1.0, 0.6, 0.2, 0.9), -- marrón brillante
+    },
+}
+
 function buildEtiquetas()
     etiquetas = {}
     local found = false
@@ -103,11 +122,21 @@ function buildEtiquetas()
         if info.tags and type(info.tags) == "table" then
             for _, tag in ipairs(info.tags) do
                 if not etiquetas[tag] then
-                    etiquetas[tag] = {
-                        activo = false,
-                        colorOff = imgui.ImVec4(0.4, 0.4, 0.4, 0.5),
-                        colorOn  = imgui.ImVec4(0.2, 0.8, 0.2, 0.9),
-                    }
+                    local colores = coloresEtiquetas[string.lower(tag)]
+                    if colores then
+                        etiquetas[tag] = {
+                            activo = false,
+                            colorOff = colores.off,
+                            colorOn  = colores.on,
+                        }
+                    else
+                        -- fallback gris si no definiste color
+                        etiquetas[tag] = {
+                            activo = false,
+                            colorOff = imgui.ImVec4(0.4, 0.4, 0.4, 0.3),
+                            colorOn  = imgui.ImVec4(0.7, 0.7, 0.7, 0.9),
+                        }
+                    end
                 end
                 found = true
             end
@@ -621,16 +650,36 @@ local infoFrame = imgui.OnFrame(
             imgui.BeginChild("##tagsinfo", imgui.ImVec2(220, 70), true,
                 imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
 
-                if extra and extra.tags and type(extra.tags) == "table" then
-                    for _, tag in ipairs(extra.tags) do
-                        imgui.SameLine()
-                        imgui.Button(tag, imgui.ImVec2(80, 25))
+            if extra and extra.tags and type(extra.tags) == "table" then
+                for _, tag in ipairs(extra.tags) do
+                    local colores = coloresEtiquetas[string.lower(tag)]
+                    if colores then
+                        -- Usar color opaco (apagado)
+                        imgui.PushStyleColor(imgui.Col.Button, colores.off)
+                        imgui.PushStyleColor(imgui.Col.ButtonHovered, colores.off)
+                        imgui.PushStyleColor(imgui.Col.ButtonActive, colores.off)
+                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1)) -- texto gris
+                    else
+                        -- fallback gris
+                        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
                     end
-                else
-                    imgui.Text("Etiquetas: N/A")
+
+                    imgui.SameLine()
+                    local textSize = imgui.CalcTextSize(tag).y
+            local padding = 10 -- margen vertical
+            imgui.Button(tag, imgui.ImVec2(80, textSize + padding))
+
+                    imgui.PopStyleColor(4)
                 end
+            else
+                imgui.Text("Etiquetas: N/A")
+            end
 
             imgui.EndChild()
+
 
             imgui.Spacing()
             imgui.Text("Administrar")
