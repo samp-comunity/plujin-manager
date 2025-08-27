@@ -383,8 +383,50 @@ function renderDownloaderUI()
     if isDownloading then
         imgui.Separator()
         imgui.Text("Descargando: " .. currentDownload)
-        imgui.ProgressBar(downloadProgress, imgui.ImVec2(300, 20))
+
+        -- ===== Config =====
+        local barSize          = imgui.ImVec2(360, 22)  -- barra más ancha
+        local spinnerRadius    = 12                     -- spinner más grande
+        local spinnerThickness = 3
+        local gap              = 16                     -- espacio entre spinner y barra
+        local gapText          = 12                     -- espacio entre barra y porcentaje
+        local leftPad          = 6                      -- margen izquierdo
+
+        -- Alturas para centrar verticalmente spinner vs barra vs texto
+        local barH        = barSize.y
+        local spinnerH    = spinnerRadius * 2
+        local alignOffset = (barH - spinnerH) * 0.5
+
+        -- Porcentaje redondeado (0–100%)
+        local percentStr  = tostring(math.floor(downloadProgress * 100 + 0.5)) .. "%"
+
+        -- Calcular ancho total del grupo
+        local textWidth   = imgui.CalcTextSize(percentStr).x
+        local groupWidth  = leftPad + spinnerH + gap + barSize.x + gapText + textWidth
+        local winWidth    = imgui.GetWindowSize().x
+
+        -- Centrar grupo en ventana
+        local startX = (winWidth - groupWidth) * 0.5
+        local baseY  = imgui.GetCursorPosY()
+
+        imgui.BeginGroup()
+            -- Spinner
+            imgui.SetCursorPos(imgui.ImVec2(startX + leftPad, baseY + alignOffset))
+            Spinner("##downloadspinner", spinnerRadius, spinnerThickness, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
+
+            -- Barra
+            imgui.SetCursorPos(imgui.ImVec2(startX + leftPad + spinnerH + gap, baseY))
+            imgui.ProgressBar(downloadProgress, barSize, "")
+
+            -- Texto porcentaje (ej: "42%")
+            local textHeight = imgui.CalcTextSize(percentStr).y
+            imgui.SetCursorPos(imgui.ImVec2(startX + leftPad + spinnerH + gap + barSize.x + gapText,
+                                            baseY + (barH - textHeight) * 0.5))
+            imgui.TextUnformatted(percentStr)
+        imgui.EndGroup()
     end
+
+
 
     if showRestartPrompt and #installedPending > 0 then
         imgui.Separator()
@@ -523,23 +565,87 @@ local infoFrame = imgui.OnFrame(
         imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
 
             if selectedFile then
-                local displayName = selectedFile.name:gsub("%.lua$", "")
-                local extra = scriptsInfo[selectedFile.name]
-                imgui.PushFont(font1)
-                imgui.Text(fa.FILE_CODE .. " Nombre: " .. displayName)
+            local displayName = selectedFile.name:gsub("%.lua$", "")
+            local extra = scriptsInfo[selectedFile.name]
 
+            -- helper: convierte nil -> "N/A"
+            local function s(v)
+                if v == nil or v == "" then return "N/A" end
+                return tostring(v)
+            end
+
+            -- Título grande
+            imgui.PushFont(logofont)
+            imgui.Text(displayName)
+            imgui.PopFont()
+            imgui.Spacing()
+            imgui.PushFont(font1)
+
+            -- Dos columnas
+            imgui.Columns(2, nil, false)
+
+            -- Columna izquierda (info técnica en cajita fija)
+            imgui.BeginChild("##leftinfo", imgui.ImVec2(220, 150), true,
+                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+                imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
+                imgui.Spacing()
+                imgui.Text(fa.CALENDAR .. " Released: " .. s(extra and extra.released))
+                imgui.Spacing()
+                imgui.Text(fa.ROTATE .. " Updated: " .. s(extra and extra.updated))
+                imgui.Spacing()
+                imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.version))
+            imgui.EndChild()
+
+            imgui.NextColumn()
+
+            -- Columna derecha (descripción + créditos en cajita fija)
+            imgui.BeginChild("##rightinfo", imgui.ImVec2(0, 150), true,
+                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
                 if extra then
-                    imgui.Text(fa.USER .." Autor: " .. (extra.author or "Desconocido"))
-                    imgui.TextWrapped(fa.FILE_LINES .." " .. (extra.description or "Sin descripción"))
+                    imgui.TextWrapped(fa.FILE_LINES .. " " .. s(extra.description))
+                    imgui.Spacing()
+                    imgui.Text("Créditos:")
+                    imgui.BulletText(s(extra.author))
+                    if extra.credits and type(extra.credits) == "table" then
+                        for _, c in ipairs(extra.credits) do
+                            imgui.BulletText(s(c))
+                        end
+                    end
                 else
-                    imgui.TextWrapped(fa.FILE_LINES .." No hay información adicional")
+                    imgui.TextWrapped("No hay información adicional")
+                end
+            imgui.EndChild()
+
+            imgui.Columns(1) 
+            imgui.Spacing()
+            imgui.Spacing()
+            imgui.Text("Etiquetas")
+            imgui.Spacing()
+
+            -- 🔹 Cajita para etiquetas
+            imgui.BeginChild("##tagsinfo", imgui.ImVec2(220, 70), true,
+                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
+                if extra and extra.tags and type(extra.tags) == "table" then
+                    for _, tag in ipairs(extra.tags) do
+                        imgui.SameLine()
+                        imgui.Button(tag, imgui.ImVec2(80, 25))
+                    end
+                else
+                    imgui.Text("Etiquetas: N/A")
                 end
 
-                imgui.Separator()
+            imgui.EndChild()
 
+            imgui.Spacing()
+            imgui.Text("Administrar")
+            imgui.Spacing()
+
+            imgui.BeginChild("##actions", imgui.ImVec2(220, 70), true,
+                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
                 local status = getScriptStatus(selectedFile)
                 if status == "checking" then
-                    Spinner("##checkspinner", 12, 2.5, imgui.ImVec4(1.0, 1.0, 1.0, 1.0))
+                    Spinner("##checkspinner", 12, 2.5, imgui.ImVec4(1,1,1,1))
                 elseif status == "same" then
                     if imgui.Button(fa.TRASH .. " Desinstalar") then
                         lua_thread.create(function()
@@ -548,10 +654,9 @@ local infoFrame = imgui.OnFrame(
                             local ok, err = os.remove(path)
                             if ok then
                                 clearStatusCache()
-
                                 for _, scr in ipairs(script.list()) do
                                     if scr.path:find(filename, 1, true) then
-                                        script.unload(scr) 
+                                        script.unload(scr)
                                         break
                                     end
                                 end
@@ -559,7 +664,6 @@ local infoFrame = imgui.OnFrame(
                         end)
                         showInfoWindow[0] = false
                     end
-
                 elseif status == "different" then
                     if imgui.Button(fa.UPLOAD .. " Actualizar") then
                         lua_thread.create(function()
@@ -567,7 +671,7 @@ local infoFrame = imgui.OnFrame(
                         end)
                         showInfoWindow[0] = false
                     end
-                else 
+                else
                     if imgui.Button(fa.DOWNLOAD .. " Instalar") then
                         lua_thread.create(function()
                             downloadFile(selectedFile.url, selectedFile.name)
@@ -575,11 +679,11 @@ local infoFrame = imgui.OnFrame(
                         showInfoWindow[0] = false
                     end
                 end
-
-
                 imgui.PopFont()
             imgui.EndChild()
         end
+
+        imgui.EndChild()
 
         imgui.End()
     end
