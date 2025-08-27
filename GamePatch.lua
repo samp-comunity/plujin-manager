@@ -154,48 +154,80 @@ function DrawEtiquetas()
     end
 end
 
--- obtiene lista según etiquetas activas
+local isRefreshing = false
+
 function refreshRepoFiles()
-    local urls = {}
-
-    if etiquetas.Legal.activo then
-        table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal")
-    end
-    if etiquetas.Ilegal.activo then
-        table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
-    end
-
-    if #urls == 0 then
-        urls = {
-            "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
-            "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal"
-        }
-    end
-
+    isRefreshing = true
     repoFiles = {}
 
-    for _, url in ipairs(urls) do
-        local body, code = https.request(url)
-        if code == 200 then
-            local data, _, err = json.decode(body, 1, nil)
-            if not err then
-                for _, item in ipairs(data) do
-                    if item.type == "file" and item.name:match("%.lua$") then
-                        table.insert(repoFiles, { name = item.name, url = item.download_url })
+    lua_thread.create(function()
+        local urls = {}
+
+        if etiquetas.Legal.activo then
+            table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal")
+        end
+        if etiquetas.Ilegal.activo then
+            table.insert(urls, "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal")
+        end
+
+        if #urls == 0 then
+            urls = {
+                "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/legal",
+                "https://api.github.com/repos/Nelson-hast/plujin-manager/contents/scripts/ilegal"
+            }
+        end
+
+        for _, url in ipairs(urls) do
+            local host, path = url:match("https://([^/]+)(/.+)")
+            local tcp = assert(socket.tcp())
+            tcp:connect(host, 443)
+            tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
+            tcp:dohandshake()
+
+            tcp:send("GET " .. path .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\nUser-Agent: Lua\r\n\r\n")
+
+            local data, headers_done, body = "", false, ""
+            while true do
+                local chunk, status, partial = tcp:receive(1024)
+                local buff = chunk or partial
+                if buff and #buff > 0 then
+                    data = data .. buff
+                    if not headers_done then
+                        local header_end = data:find("\r\n\r\n", 1, true)
+                        if header_end then
+                            headers_done = true
+                            body = data:sub(header_end+4)
+                        end
+                    else
+                        body = body .. buff
                     end
                 end
+                if status == "closed" then break end
+                wait(0) -- 🔑 libera el frame mientras descarga
             end
-        else
-            print("[Downloader] ❌ Error al obtener lista: " .. tostring(code))
+            tcp:close()
+
+            -- 🔽 procesar JSON en lotes
+            if body ~= "" then
+                local decoded, _, err = json.decode(body, 1, nil)
+                if not err then
+                    for i, item in ipairs(decoded) do
+                        if item.type == "file" and item.name:match("%.lua$") then
+                            table.insert(repoFiles, { name = item.name, url = item.download_url })
+                        end
+                        if i % 20 == 0 then
+                            wait(0) -- 🔑 cada 20 archivos liberamos un frame
+                        end
+                    end
+                end
+                wait(0) -- 🔑 deja respirar después de cada JSON
+            end
         end
-    end
 
-    print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
+        print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
+        isRefreshing = false
+    end)
 end
-
-lua_thread.create(function()
-    refreshRepoFiles()
-end)
 
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
@@ -256,6 +288,9 @@ function downloadFile(url, filename)
     isDownloading = false
     downloadProgress = 1.0
 
+    -- 🔽 limpiar cache para que el botón cambie a "Desinstalar"
+    clearStatusCache()
+
     -- 🔽 en vez de 1 archivo, acumulamos varios
     table.insert(installedPending, filename)
     showRestartPrompt = true
@@ -272,16 +307,23 @@ function renderDownloaderUI()
     end
     imgui.SameLine()
     if imgui.Button(" Actualizar lista") then
-        lua_thread.create(function() refreshRepoFiles() end)
+        refreshRepoFiles() -- ahora refreshRepoFiles ya maneja su propio lua_thread
     end
 
     imgui.Separator()
 
-    for _, f in ipairs(repoFiles) do
-        local displayName = f.name:gsub("%.lua$", "")
-        if imgui.Button(displayName) then
-            selectedFile = f
-            showInfoWindow[0] = true
+    -- 🔽 Mostrar spinner mientras se refresca
+    if isRefreshing then
+        Spinner("##refreshspinner", 12, 2.5, imgui.ImVec4(1,1,1,1))
+        imgui.SameLine()
+        imgui.Text(" Cargando lista...")
+    else
+        for _, f in ipairs(repoFiles) do
+            local displayName = f.name:gsub("%.lua$", "")
+            if imgui.Button(displayName) then
+                selectedFile = f
+                showInfoWindow[0] = true
+            end
         end
     end
 
@@ -313,46 +355,103 @@ function renderDownloaderUI()
         imgui.PopStyleColor()
     end
 end
+
 -- 🔽 función auxiliar para verificar si el archivo ya existe localmente y si coincide con GitHub
 -- 🔽 cache de estados, para no recalcular en cada frame
 local scriptStatusCache = {}
 
--- 🔽 función auxiliar para verificar si el archivo ya existe localmente y si coincide con GitHub
-local function computeScriptStatus(file)
-    local path = getWorkingDirectory() .. "/" .. file.name
-    local f = io.open(path, "rb")
-    if not f then
-        return "missing" -- no instalado
-    end
-
-    local localContent = f:read("*a")
-    f:close()
-
-    -- pedir el archivo remoto directamente (una sola vez)
-    local body, code = https.request(file.url)
-    if code == 200 and body then
-        if body == localContent then
-            return "same" -- instalado y actualizado
-        else
-            return "different" -- instalado pero distinto (hay update)
+function checkScriptRemote(file, callback)
+    lua_thread.create(function()
+        local path = getWorkingDirectory() .. "/" .. file.name
+        local f = io.open(path, "rb")
+        if not f then
+            callback("missing")
+            return
         end
-    end
+        local localContent = f:read("*a")
+        f:close()
 
-    return "unknown"
+        -- parsear URL
+        local host, pathUrl = file.url:match("https://([^/]+)(/.+)")
+        local tcp = assert(socket.tcp())
+        tcp:connect(host, 443)
+        tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
+        tcp:dohandshake()
+
+        -- pedir archivo
+        tcp:send("GET " .. pathUrl .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\n\r\n")
+
+        local data, headers_done, body = "", false, ""
+        while true do
+            local chunk, status, partial = tcp:receive(1024)
+            local buff = chunk or partial
+            if buff and #buff > 0 then
+                data = data .. buff
+                if not headers_done then
+                    local header_end = data:find("\r\n\r\n", 1, true)
+                    if header_end then
+                        headers_done = true
+                        body = data:sub(header_end+4)
+                    end
+                else
+                    body = body .. buff
+                end
+            end
+            if status == "closed" then break end
+            wait(0) -- 🔑 deja respirar al juego
+        end
+        tcp:close()
+
+        if body == "" then
+            callback("unknown")
+        elseif body == localContent then
+            callback("same")
+        else
+            callback("different")
+        end
+    end)
 end
 
--- 🔽 función pública: devuelve el estado cacheado o lo calcula solo 1 vez
-local function getScriptStatus(file)
+-- cache
+local scriptStatusCache = {}
+
+function getScriptStatus(file)
     if not file then return "unknown" end
     if not scriptStatusCache[file.name] then
-        scriptStatusCache[file.name] = computeScriptStatus(file)
+        scriptStatusCache[file.name] = "checking"
+        checkScriptRemote(file, function(result)
+            scriptStatusCache[file.name] = result
+        end)
     end
     return scriptStatusCache[file.name]
 end
 
+
 -- 🔽 limpiar cache cuando refrescamos lista o instalamos algo
-local function clearStatusCache()
+function clearStatusCache()
     scriptStatusCache = {}
+end
+
+function Spinner(label, radius, thickness, color)
+    local draw_list = imgui.GetWindowDrawList()
+    local pos = imgui.GetCursorScreenPos()
+    local time = os.clock()
+
+    local num_segments = 30
+    local start = math.floor(num_segments * (time * 0.8 - math.floor(time * 0.8)))
+
+    local a_min = math.pi * 2 * start / num_segments
+    local a_max = math.pi * 2 * (start + num_segments / 3) / num_segments
+
+    local center = imgui.ImVec2(pos.x + radius, pos.y + radius)
+    for i = 0, num_segments do
+        local a = a_min + (i / num_segments) * (a_max - a_min)
+        local x = center.x + math.cos(a) * radius
+        local y = center.y + math.sin(a) * radius
+        local col = imgui.GetColorU32Vec4(color)
+        draw_list:AddCircleFilled(imgui.ImVec2(x, y), thickness, col)
+    end
+    imgui.Dummy(imgui.ImVec2(radius * 2, radius * 2))
 end
 
 
@@ -387,30 +486,28 @@ local infoFrame = imgui.OnFrame(
 
                 imgui.Separator()
 
-                -- 👇 Nuevo sistema de estado
-                -- 👇 Nuevo sistema de estado con botón de eliminar
                 local status = getScriptStatus(selectedFile)
-                if status == "same" then
-                if imgui.Button(fa.TRASH .. " Desinstalar") then
-                    lua_thread.create(function()
-                        local filename = selectedFile.name
-                        local path = getWorkingDirectory() .. "/" .. filename
-                        local ok, err = os.remove(path)
-                        if ok then
-                            clearStatusCache()
+                if status == "checking" then
+                    Spinner("##checkspinner", 12, 2.5, imgui.ImVec4(1.0, 1.0, 1.0, 1.0))
+                elseif status == "same" then
+                    if imgui.Button(fa.TRASH .. " Desinstalar") then
+                        lua_thread.create(function()
+                            local filename = selectedFile.name
+                            local path = getWorkingDirectory() .. "/" .. filename
+                            local ok, err = os.remove(path)
+                            if ok then
+                                clearStatusCache()
 
-                            for _, scr in ipairs(script.list()) do
-                                if scr.path:find(filename, 1, true) then
-                                    script.unload(scr) 
-                                    break
+                                for _, scr in ipairs(script.list()) do
+                                    if scr.path:find(filename, 1, true) then
+                                        script.unload(scr) 
+                                        break
+                                    end
                                 end
                             end
-                        end
-                    end)
-                    showInfoWindow[0] = false
-                end
-
-
+                        end)
+                        showInfoWindow[0] = false
+                    end
 
                 elseif status == "different" then
                     if imgui.Button(fa.UPLOAD .. " Actualizar") then
@@ -419,7 +516,7 @@ local infoFrame = imgui.OnFrame(
                         end)
                         showInfoWindow[0] = false
                     end
-                else -- missing o unknown
+                else 
                     if imgui.Button(fa.DOWNLOAD .. " Instalar") then
                         lua_thread.create(function()
                             downloadFile(selectedFile.url, selectedFile.name)
