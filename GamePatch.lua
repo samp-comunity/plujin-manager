@@ -388,11 +388,30 @@ local infoFrame = imgui.OnFrame(
                 imgui.Separator()
 
                 -- 👇 Nuevo sistema de estado
+                -- 👇 Nuevo sistema de estado con botón de eliminar
                 local status = getScriptStatus(selectedFile)
                 if status == "same" then
-                    imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
-                    imgui.Text(fa.CHECK .. " Instalado")
-                    imgui.PopStyleColor()
+                if imgui.Button(fa.TRASH .. " Desinstalar") then
+                    lua_thread.create(function()
+                        local filename = selectedFile.name
+                        local path = getWorkingDirectory() .. "/" .. filename
+                        local ok, err = os.remove(path)
+                        if ok then
+                            clearStatusCache()
+
+                            for _, scr in ipairs(script.list()) do
+                                if scr.path:find(filename, 1, true) then
+                                    script.unload(scr) 
+                                    break
+                                end
+                            end
+                        end
+                    end)
+                    showInfoWindow[0] = false
+                end
+
+
+
                 elseif status == "different" then
                     if imgui.Button(fa.UPLOAD .. " Actualizar") then
                         lua_thread.create(function()
@@ -408,6 +427,7 @@ local infoFrame = imgui.OnFrame(
                         showInfoWindow[0] = false
                     end
                 end
+
 
                 imgui.PopFont()
             imgui.EndChild()
