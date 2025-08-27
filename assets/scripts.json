@@ -5,48 +5,48 @@
       "description": "",
       "author": "_vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/GameFixer.lua",
-      "tags": ["legal", "utilidad"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/GameFixer.lua",
+      "tags": ["Legal", "Utilidad"]
     },
     {
       "name": "Keyboard.lua",
       "description": "Muestra un teclado en pantalla configurable estilo PC",
       "author": "_vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/Keyboard.lua",
-      "tags": ["legal"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/Keyboard.lua",
+      "tags": ["Legal"]
     },
     {
       "name": "MinecraftHud.lua",
       "description": "Como su nombre lo indica muestra un hud visual estilo como el de Minecraft",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/MinecraftHud.lua",
-      "tags": ["legal"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/MinecraftHud.lua",
+      "tags": ["Legal"]
     },
     {
       "name": "Script_Manager.lua",
       "description": "",
       "author": "The Monetloader Team",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/Script_Manager.lua",
-      "tags": ["legal", "Desarrollador"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/Script_Manager.lua",
+      "tags": ["Legal", "Desarrollador"]
     },
     {
       "name": "anims.lua",
       "description": "",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/anims.lua",
-      "tags": ["legal"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/anims.lua",
+      "tags": ["Legal"]
     },
     {
       "name": "bind.lua",
       "description": "",
       "author": "MTG MODS",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/legal/bind.lua",
-      "tags": ["legal"]
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/bind.lua",
+      "tags": ["Legal"]
     },
     {
       "name": "Cipher.lua",
@@ -55,6 +55,14 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/scripts/ilegal/Cipher.lua",
       "tags": ["Cheat"]
+    },
+    {
+      "name": "GamePath.lua",
+      "description": "MarketPlace",
+      "author": "_vxnzz",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
+      "tags": ["Utilidad"]
     }
   ]
 }

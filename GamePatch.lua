@@ -76,6 +76,7 @@ function main()
     end
 	
 end
+
 local selectedFile = nil
 local showInfoWindow = new.bool(false) -- usar ImGui bool
 
@@ -152,11 +153,6 @@ function buildEtiquetas()
     end
 end
 
--- cargar info de scripts.json al inicio
-
-
-
--- 🔹 dibujar etiquetas dinámicas
 function DrawEtiquetas()
     imgui.Text("Etiquetas")
     imgui.Spacing()
@@ -177,7 +173,12 @@ function DrawEtiquetas()
             imgui.PushStyleColor(imgui.Col.Text, colorTextoOff)
         end
 
-        if imgui.Button(nombre, imgui.ImVec2(80, 30)) then
+        -- 🔹 Ajustar botón al tamaño del texto
+        local textSize = imgui.CalcTextSize(nombre)
+        local paddingX, paddingY = 20, 8
+        local buttonSize = imgui.ImVec2(textSize.x + paddingX, textSize.y + paddingY)
+
+        if imgui.Button(nombre, buttonSize) then
             data.activo = not data.activo
             lua_thread.create(function() refreshRepoFiles() end)
         end
@@ -243,6 +244,7 @@ function loadScriptsInfo()
     if code == 200 and body then
         local data, _, err = json.decode(body, 1, nil)
         if not err and type(data) == "table" and data.mods then
+            scriptsInfo = {} -- limpiar antes de recargar
             for _, mod in ipairs(data.mods) do
                 scriptsInfo[mod.name] = mod
             end
@@ -253,9 +255,14 @@ function loadScriptsInfo()
     else
         print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
     end
+
+    -- 🔹 reconstruir etiquetas dinámicas
     buildEtiquetas()
+
+    -- 🔹 refrescar lista con nuevas etiquetas
     refreshRepoFiles()
 end
+
 lua_thread.create(function()
     loadScriptsInfo()
 end)
@@ -450,8 +457,6 @@ function renderDownloaderUI()
         imgui.EndGroup()
     end
 
-
-
     if showRestartPrompt and #installedPending > 0 then
         imgui.Separator()
         imgui.Text("Instalados:")
@@ -473,7 +478,6 @@ function renderDownloaderUI()
         imgui.PopStyleColor()
     end
 end
-
 
 local scriptStatusCache = {}
 
@@ -668,9 +672,14 @@ local infoFrame = imgui.OnFrame(
                     end
 
                     imgui.SameLine()
-                    local textSize = imgui.CalcTextSize(tag).y
-            local padding = 10 -- margen vertical
-            imgui.Button(tag, imgui.ImVec2(80, textSize + padding))
+
+                    -- 🔹 Ajustar ancho al texto + padding
+                    local textSize = imgui.CalcTextSize(tag)
+                    local paddingX, paddingY = 20, 8
+                    local buttonWidth  = textSize.x + paddingX
+                    local buttonHeight = textSize.y + paddingY
+
+                    imgui.Button(tag, imgui.ImVec2(buttonWidth, buttonHeight))
 
                     imgui.PopStyleColor(4)
                 end
