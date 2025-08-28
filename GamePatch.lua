@@ -21,6 +21,7 @@ local ltn12 = require("ltn12")
 local json = require("dkjson")
 local socket = require("socket")
 local ssl = require("ssl")
+local webview   = require 'webviews'
 
 local function loadLibrary(libName, optionalMessage)
     local success, lib = pcall(require, libName)
@@ -63,6 +64,50 @@ function main()
     end
 	
 end
+
+local browserId = 99
+local windowVisible = imgui.new.bool(false)
+
+local imageUrl = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png"
+
+-- HTML que ajusta la imagen al contenedor
+local function makeHtml(url)
+    return [[
+    <html>
+    <head>
+    <style>
+    body, html {
+        margin: 0;
+        padding: 0;
+        background-color: black;
+        overflow: hidden;
+        width: 100%;
+        height: 100%;
+    }
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* "contain" = ajusta sin cortar | "cover" = llena cortando */
+    }
+    </style>
+    </head>
+    <body>
+    <img src="]] .. url .. [[" />
+    </body>
+    </html>
+    ]]
+end
+
+local initDone = false  
+
+local function initImageWebview(url)
+    if not initDone then
+        webview.createBrowser(browserId, "data:text/html," .. makeHtml(url))
+        webview.setSetting(browserId, "setJavaScriptEnabled", false)
+        initDone = true
+    end
+end
+
 
 local DEFAULT_SCRIPT_CONFIG = {
     scripts = {}
@@ -408,9 +453,40 @@ function renderDownloaderUI()
         for _, f in ipairs(repoFiles) do
             imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
 
-                local displayName = f.name:gsub("%.lua$", "")
-                imgui.CenterText(displayName)
-                imgui.Spacing()
+            local extra = scriptsInfo[f.name]
+
+            -- 🔹 Sub-child exclusivo para la imagen (tamaño fijo 126x126)
+            if extra and extra.icon and extra.icon ~= "" then
+                imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(126, 126), true)
+
+                    local pos = imgui.GetCursorScreenPos()
+
+                    -- Crear webview único para este mod si no existe
+                    if not extra.browserId then
+                        extra.browserId = math.random(1000, 9999) -- ID único
+                        webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
+                        webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
+                    end
+
+                    -- Posicionar y ajustar imagen al sub-child
+                    webview.setPos(extra.browserId, pos.x, pos.y)
+                    webview.setSize(extra.browserId, 126, 126)
+                    webview.setVisible(extra.browserId, true)
+
+                imgui.EndChild()
+            else
+                -- 🔹 Si no hay icono, dejar cuadro vacío del mismo tamaño
+                imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(126, 126), true)
+                imgui.CenterText("Sin Icono")
+                imgui.EndChild()
+            end
+
+            imgui.Spacing()
+
+            -- 🔹 Nombre debajo de la imagen
+            local displayName = f.name:gsub("%.lua$", "")
+            imgui.CenterText(displayName)
+            imgui.Spacing()
 
                 -- Verificar si ya está instalado
                 local savePath = getWorkingDirectory() .. "/" .. f.name
@@ -944,6 +1020,47 @@ function fileExists(filePath)
         return true
     else
         return false
+    end
+end
+
+
+
+imgui.OnFrame(function() return windowVisible[0] end, function()
+    imgui.SetNextWindowSize(imgui.ImVec2(128, 128), imgui.Cond.Always)
+    local io = imgui.GetIO()
+    imgui.SetNextWindowPos(imgui.ImVec2((io.DisplaySize.x - 128) / 2, (io.DisplaySize.y - 128) / 2), imgui.Cond.Always)
+
+    local flags = imgui.WindowFlags.NoResize +
+                  imgui.WindowFlags.NoMove +
+                  imgui.WindowFlags.NoCollapse +
+                  imgui.WindowFlags.NoScrollbar +
+                  imgui.WindowFlags.NoBackground +
+                  imgui.WindowFlags.NoTitleBar 
+
+    if imgui.Begin("Imagen de Internet", windowVisible, flags) then
+        local avail = imgui.GetContentRegionAvail()
+        local pos   = imgui.GetCursorScreenPos()
+
+        initImageWebview(imageUrl)
+        webview.setPos(browserId, pos.x, pos.y)
+        webview.setSize(browserId, avail.x, avail.y)
+        webview.setVisible(browserId, true)
+    end
+    imgui.End()
+
+    if not windowVisible[0] then
+        webview.setVisible(browserId, false)
+    end
+end)
+
+sampRegisterChatCommand("gp", function()
+    windowVisible[0] = not windowVisible[0]
+    webview.setVisible(browserId, windowVisible[0])
+end)
+
+function onScriptTerminate(script, quitGame)
+    if script == thisScript() then
+        webview.setVisible(browserId, false)
     end
 end
 
