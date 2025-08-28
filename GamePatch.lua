@@ -649,47 +649,67 @@ function Spinner(label, radius, thickness, color)
     end
     imgui.Dummy(imgui.ImVec2(radius * 2, radius * 2))
 end
-
-
--- Ventana de información del script
 local infoFrame = imgui.OnFrame(
     function() return showInfoWindow[0] end,
     function(self)
         imgui.SetNextWindowSize(imgui.ImVec2(400, 260), imgui.Cond.FirstUseEver)
-        imgui.Begin("Información del script", showInfoWindow, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
+        imgui.Begin("Información del script", showInfoWindow,
+            imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
+
         local windowSize = imgui.GetWindowSize()
 
+        -- Botón cerrar
         imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 46, 10))
         imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 1.0, 1.0, 1))
         addons.CloseButton("##closemenu", showInfoWindow, 36, 15)
         imgui.PopStyleColor()
 
-        imgui.SetCursorPos(imgui.ImVec2(15, 15)) 
+        -- Contenedor principal con padding
+        imgui.SetCursorPos(imgui.ImVec2(15, 15))
         imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
 
-            if selectedFile then
-            local displayName = selectedFile.name:gsub("%.lua$", "")
-            local extra = scriptsInfo[selectedFile.name]
+        if selectedFile then
+            local totalWidth   = imgui.GetContentRegionAvail().x
+            local totalHeight  = imgui.GetContentRegionAvail().y
 
-            -- helper: convierte nil -> "N/A"
-            local function s(v)
-                if v == nil or v == "" then return "N/A" end
-                return tostring(v)
-            end
+            local gapBetween   = 10   -- espacio central
+            local paddingRight = 10   -- espacio borde derecho
 
-            -- Título grande
-            imgui.PushFont(logofont)
-            imgui.Text(displayName)
-            imgui.PopFont()
-            imgui.Spacing()
-            imgui.PushFont(font1)
+            local leftWidth  = (totalWidth * 0.40) - (gapBetween / 2)
+            local rightWidth = (totalWidth * 0.60) - paddingRight - (gapBetween / 2)
+            local childHeight = totalHeight - 10
 
-            -- Dos columnas
-            imgui.Columns(2, nil, false)
-
-            -- Columna izquierda (info técnica en cajita fija)
-            imgui.BeginChild("##leftinfo", imgui.ImVec2(300, 150), true,
+            -- Columna izquierda
+            imgui.BeginChild("##leftpanel", imgui.ImVec2(leftWidth, childHeight), false,
                 imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
+                local displayName = selectedFile.name:gsub("%.lua$", "")
+                local extra = scriptsInfo[selectedFile.name]
+
+                local function s(v)
+                    if v == nil or v == "" then return "N/A" end
+                    return tostring(v)
+                end
+
+                -- Título
+                imgui.PushFont(font1)
+                imgui.Text(displayName)
+                imgui.PopFont()
+                
+                imgui.PushFont(font3)
+                if extra then
+                    imgui.Text(" By: " .. s(extra.author))
+                else
+                    imgui.Text(" By: N/A")
+                end
+                imgui.PopFont()
+
+                imgui.NewLine()
+                imgui.PushFont(font2)
+
+              imgui.BeginChild("##techinfo", imgui.ImVec2(0, 150), true,
+                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
                 imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
                 imgui.Spacing()
                 imgui.Text(fa.CALENDAR .. " Released: " .. s(extra and extra.released))
@@ -697,14 +717,121 @@ local infoFrame = imgui.OnFrame(
                 imgui.Text(fa.ROTATE .. " Updated: " .. s(extra and extra.updated))
                 imgui.Spacing()
                 imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.version))
+
             imgui.EndChild()
+                imgui.Spacing()
+                imgui.Spacing()
+                imgui.Text("Etiquetas")
+                imgui.Spacing()
 
-            imgui.NextColumn()
+                -- Tags
+                imgui.BeginChild("##tagsinfo", imgui.ImVec2(0, 70), true,
+                    imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
 
-            -- Columna derecha (descripción + créditos en cajita fija)
-            imgui.BeginChild("##rightinfo", imgui.ImVec2(0, 150), true,
-                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
-                if extra then
+                if extra and extra.tags and type(extra.tags) == "table" and next(extra.tags) ~= nil then
+                    local first = true
+                    for _, tag in ipairs(extra.tags) do
+                        local colores = coloresEtiquetas[string.lower(tag)]
+                        if colores then
+                            imgui.PushStyleColor(imgui.Col.Button, colores.off)
+                            imgui.PushStyleColor(imgui.Col.ButtonHovered, colores.off)
+                            imgui.PushStyleColor(imgui.Col.ButtonActive, colores.off)
+                            imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
+                        else
+                            imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                            imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                            imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
+                            imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
+                        end
+
+                        if not first then imgui.SameLine() end
+                        first = false
+
+                        local textSize = imgui.CalcTextSize(tag)
+                        local paddingX, paddingY = 20, 8
+                        local buttonWidth  = textSize.x + paddingX
+                        local buttonHeight = textSize.y + paddingY
+
+                        imgui.Button(tag, imgui.ImVec2(buttonWidth, buttonHeight))
+
+                        imgui.PopStyleColor(4)
+                    end
+                else
+                    imgui.Text("Sin etiquetas disponibles")
+                end
+
+                imgui.EndChild()
+
+                imgui.Spacing()
+                imgui.Text("Administrar")
+                imgui.Spacing()
+
+                -- Acciones
+                imgui.BeginChild("##actions", imgui.ImVec2(0, 70), true,
+                    imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+                    local status = getScriptStatus(selectedFile)
+                    if status == "checking" then
+                        Spinner("##checkspinner", 12, 2.5, imgui.ImVec4(1,1,1,1))
+                    elseif status == "same" then
+                        if imgui.Button(fa.TRASH .. " Desinstalar") then
+                            lua_thread.create(function()
+                                local filename = selectedFile.name
+                                local path = getWorkingDirectory() .. "/" .. filename
+                                local ok, err = os.remove(path)
+                                if ok then
+                                    clearStatusCache()
+                                    for _, scr in ipairs(script.list()) do
+                                        if scr.path:find(filename, 1, true) then
+                                            script.unload(scr)
+                                            break
+                                        end
+                                    end
+                                end
+                            end)
+                            showInfoWindow[0] = false
+                        end
+                    elseif status == "different" then
+                        if imgui.Button(fa.UPLOAD .. " Actualizar") then
+                            lua_thread.create(function()
+                                downloadFile(selectedFile.url, selectedFile.name)
+                            end)
+                            showInfoWindow[0] = false
+                        end
+                    else
+                        if imgui.Button(fa.DOWNLOAD .. " Instalar") then
+                            lua_thread.create(function()
+                                downloadFile(selectedFile.url, selectedFile.name)
+                            end)
+                            showInfoWindow[0] = false
+                        end
+                    end
+                    imgui.EndChild()
+                    imgui.EndChild()
+                    
+            -- Espacio entre columnas
+            imgui.SameLine()
+            imgui.Dummy(imgui.ImVec2(gapBetween, 0))
+            imgui.SameLine()
+
+            imgui.BeginChild("##rightpanel", imgui.ImVec2(rightWidth, childHeight), false,
+            imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
+            if extra then
+                -- Botón "Descripción"
+                local label = fa.COMMENT_DOTS .. " Descripción"
+
+                local textSize = imgui.CalcTextSize(label)
+                local paddingX, paddingY = 20, 8
+                local buttonWidth  = textSize.x + paddingX
+                local buttonHeight = textSize.y + paddingY
+
+                imgui.Button(label, imgui.ImVec2(buttonWidth, buttonHeight))
+                imgui.Spacing()
+
+                -- Caja de descripción + créditos
+                imgui.BeginChild("##descriptionBox", imgui.ImVec2(0, 0), true,
+                    imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
                     imgui.TextWrapped(fa.FILE_LINES .. " " .. s(extra.description))
                     imgui.Spacing()
                     imgui.Text("Créditos:")
@@ -714,105 +841,22 @@ local infoFrame = imgui.OnFrame(
                             imgui.BulletText(s(c))
                         end
                     end
-                else
-                    imgui.TextWrapped("No hay información adicional")
-                end
-            imgui.EndChild()
 
-            imgui.Columns(1) 
-            imgui.Spacing()
-            imgui.Spacing()
-            imgui.Text("Etiquetas")
-            imgui.Spacing()
-
-            imgui.BeginChild("##tagsinfo", imgui.ImVec2(300, 70), true,
-                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
-
-            if extra and extra.tags and type(extra.tags) == "table" and next(extra.tags) ~= nil then
-                local first = true
-                for _, tag in ipairs(extra.tags) do
-                    local colores = coloresEtiquetas[string.lower(tag)]
-                    if colores then
-                        imgui.PushStyleColor(imgui.Col.Button, colores.off)
-                        imgui.PushStyleColor(imgui.Col.ButtonHovered, colores.off)
-                        imgui.PushStyleColor(imgui.Col.ButtonActive, colores.off)
-                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
-                    else
-                        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
-                        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
-                        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
-                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
-                    end
-
-                    if not first then imgui.SameLine() end
-                    first = false
-
-                    local textSize = imgui.CalcTextSize(tag)
-                    local paddingX, paddingY = 20, 8
-                    local buttonWidth  = textSize.x + paddingX
-                    local buttonHeight = textSize.y + paddingY
-
-                    imgui.Button(tag, imgui.ImVec2(buttonWidth, buttonHeight))
-
-                    imgui.PopStyleColor(4)
-                end
+                imgui.EndChild()
             else
-                imgui.Text("Sin etiquetas disponibles")
+                imgui.TextWrapped("No hay información adicional")
             end
-
-            imgui.EndChild()
-
-            imgui.Spacing()
-            imgui.Text("Administrar")
-            imgui.Spacing()
-
-            imgui.BeginChild("##actions", imgui.ImVec2(300, 70), true,
-                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
-                local status = getScriptStatus(selectedFile)
-                if status == "checking" then
-                    Spinner("##checkspinner", 12, 2.5, imgui.ImVec4(1,1,1,1))
-                elseif status == "same" then
-                    if imgui.Button(fa.TRASH .. " Desinstalar") then
-                        lua_thread.create(function()
-                            local filename = selectedFile.name
-                            local path = getWorkingDirectory() .. "/" .. filename
-                            local ok, err = os.remove(path)
-                            if ok then
-                                clearStatusCache()
-                                for _, scr in ipairs(script.list()) do
-                                    if scr.path:find(filename, 1, true) then
-                                        script.unload(scr)
-                                        break
-                                    end
-                                end
-                            end
-                        end)
-                        showInfoWindow[0] = false
-                    end
-                elseif status == "different" then
-                    if imgui.Button(fa.UPLOAD .. " Actualizar") then
-                        lua_thread.create(function()
-                            downloadFile(selectedFile.url, selectedFile.name)
-                        end)
-                        showInfoWindow[0] = false
-                    end
-                else
-                    if imgui.Button(fa.DOWNLOAD .. " Instalar") then
-                        lua_thread.create(function()
-                            downloadFile(selectedFile.url, selectedFile.name)
-                        end)
-                        showInfoWindow[0] = false
-                    end
-                end
-                imgui.PopFont()
-            imgui.EndChild()
-        end
 
         imgui.EndChild()
 
+            imgui.PopFont()
+        end
+        
+        imgui.EndChild()
         imgui.End()
     end
 )
+
 
 local MainMenu = imgui.OnFrame(
     function() return windowState[0] end,
@@ -833,11 +877,11 @@ local MainMenu = imgui.OnFrame(
 
         local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
         imgui.PushStyleColor(imgui.Col.Text, bgColor)
-        imgui.PushFont(logofont)
-        imgui.Text('GamePatch ')
+        imgui.PushFont(font1)
+        imgui.CenterText('GamePatch ')
         imgui.PopStyleColor()
         imgui.PopFont()
-        imgui.PushFont(font1)
+        imgui.PushFont(font2)
         imgui.Spacing()
         if imgui.Button(fa.REPEAT.. "##reload", imgui.ImVec2(40, 30)) then
             thisScript():reload()
@@ -875,11 +919,11 @@ local filtersFrame = imgui.OnFrame(
 
         local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
         imgui.PushStyleColor(imgui.Col.Text, bgColor)
-        imgui.PushFont(logofont)
+        imgui.PushFont(font1)
         imgui.CenterText('Buscar filtros')
         imgui.PopStyleColor()
         imgui.PopFont()
-        imgui.PushFont(font1)
+        imgui.PushFont(font2)
         imgui.Spacing()
    
         DrawEtiquetas()
@@ -1044,10 +1088,16 @@ imgui.OnInitialize(function()
     local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesDefault()
     local fontPath = getWorkingDirectory()  .. "/resource/fonts/"
 
-	font1 = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "Verdana.ttf", 25, nil, glyph_ranges)
+	font1 = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "Verdana.ttf", 32, nil, glyph_ranges)
+	loadFAFont("solid", 25, true)
+    loadSCFont(25, true)
+	font2 = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "Verdana.ttf", 25, nil, glyph_ranges)
 	loadFAFont("solid", 20, true)
     loadSCFont(25, true)
-	logofont = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "font1.otf", 45, nil, glyph_ranges)
+	font3 = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "Cinzel-Bold.ttf", 22, nil, glyph_ranges)
+	loadFAFont("solid", 15, true)
+    loadSCFont(20, true)
+	logofont = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "font2.otf", 45, nil, glyph_ranges)
 	loadFAFont("solid", 30, true)
 end)
 
