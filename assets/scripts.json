@@ -66,10 +66,18 @@
     },
     {
       "name": "Commands_Helper.lua",
-      "description": "Mod de chetos",
-      "author": "",
+      "description": "Permite crear botones personalizados para los comandos que más usan, como me, do, entre otros. Se puede modificar el color y la posición de cada botón.\nNota: Cuando agregues comandos, no incluyas la barra diagonal (/).",
+      "author": "Mikano",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Commands_Helper.lua",
+      "tags": ["Legal"]
+    },
+    {
+      "name": "HP_bar.lua",
+      "description": "Muestra una barra de vida y chaleco en el personaje.",
+      "author": "hnnssy",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/HP_bar.lua",
       "tags": ["Legal"]
     }
   ]
