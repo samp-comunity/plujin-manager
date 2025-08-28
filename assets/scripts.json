@@ -5,7 +5,7 @@
       "description": "",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/GameFixer.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/GameFixer.lua",
       "tags": ["Legal", "Utilidad"]
     },
     {
@@ -13,7 +13,7 @@
       "description": "Muestra un teclado en pantalla configurable estilo PC",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/Keyboard.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Keyboard.lua",
       "tags": ["Legal"]
     },
     {
@@ -21,7 +21,7 @@
       "description": "Como su nombre lo indica muestra un hud visual estilo como el de Minecraft",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/MinecraftHud.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/MinecraftHud.lua",
       "tags": ["Legal"]
     },
     {
@@ -29,7 +29,7 @@
       "description": "",
       "author": "The Monetloader Team",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/Script_Manager.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Script_Manager.lua",
       "tags": ["Legal", "Desarrollador"]
     },
     {
@@ -37,7 +37,7 @@
       "description": "",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/anims.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/anims.lua",
       "tags": ["Legal"]
     },
     {
@@ -45,7 +45,7 @@
       "description": "",
       "author": "MTG MODS",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/bind.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/bind.lua",
       "tags": ["Legal"]
     },
     {
@@ -53,7 +53,7 @@
       "description": "Mod de chetos",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/scripts/ilegal/Cipher.lua",
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Cipher.lua",
       "tags": ["Cheat"]
     },
     {
