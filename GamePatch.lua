@@ -413,6 +413,7 @@ function downloadFile(url, filename)
     print("[Downloader] ✅ Descarga terminada: " .. savePath)
     return true
 end
+
 -- renderDownloaderUI con cuadritos y botón "Descargar" en azul
 function renderDownloaderUI()
     imgui.Separator()
