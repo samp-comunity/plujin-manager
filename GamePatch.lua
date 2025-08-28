@@ -444,209 +444,221 @@ function renderDownloaderUI()
 
         imgui.SetCursorPos(imgui.ImVec2(centerX, centerY))
         Spinner("##refreshspinner", spinnerSize, spinnerThickness, imgui.ImVec4(1, 1, 1, 1))
-   else
-    -- Mostrar mods en cuadritos tipo grid (con paginación)
-    local itemWidth = 200
-    local itemHeight = 250
-    local spacing = 15
-    local winSize = imgui.GetWindowSize()
-    local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
+    else
+        -- Mostrar mods en cuadritos tipo grid (con paginación)
+        local itemWidth = 200
+        local itemHeight = 250
+        local spacing = 15
+        local winSize = imgui.GetWindowSize()
+        local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
 
-    -- cálculos de páginas
-    local totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
-    local startIndex = (currentPage - 1) * itemsPerPage + 1
-    local endIndex = math.min(startIndex + itemsPerPage - 1, #repoFiles)
+        -- cálculos de páginas
+        local totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
+        local startIndex = (currentPage - 1) * itemsPerPage + 1
+        local endIndex = math.min(startIndex + itemsPerPage - 1, #repoFiles)
 
-    local col = 0
-    for i = startIndex, endIndex do
-        local f = repoFiles[i]
+        local col = 0
+        for i = startIndex, endIndex do
+            local f = repoFiles[i]
 
-        imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
+            imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
 
-            imgui.NewLine()
-            local extra = scriptsInfo[f.name]
+                imgui.NewLine()
+                local extra = scriptsInfo[f.name]
 
-            -- 🔹 Imagen centrada
-            if extra and extra.icon and extra.icon ~= "" then
-                local avail = imgui.GetContentRegionAvail()
-                local imgSize = 90
-                local offsetX = (avail.x - imgSize) / 2
-                if offsetX > 0 then
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-                end
-
-                imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
-
-                    local pos = imgui.GetCursorScreenPos()
-
-                    if not extra.browserId then
-                        extra.browserId = math.random(1000, 9999)
-                        webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
-                        webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
+                -- 🔹 Imagen centrada
+                if extra and extra.icon and extra.icon ~= "" then
+                    local avail = imgui.GetContentRegionAvail()
+                    local imgSize = 90
+                    local offsetX = (avail.x - imgSize) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
                     end
 
-                    webview.setPos(extra.browserId, pos.x, pos.y)
-                    webview.setSize(extra.browserId, imgSize, imgSize)
-                    webview.setVisible(extra.browserId, true)
+                    imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
 
-                imgui.EndChild()
-            else
-                imgui.Spacing()
-                imgui.Spacing()
-                local avail = imgui.GetContentRegionAvail()
-                local imgSize = 90
-                local offsetX = (avail.x - imgSize) / 2
-                if offsetX > 0 then
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-                end
+                        local pos = imgui.GetCursorScreenPos()
 
-                imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
-                imgui.CenterText("Sin Icono")
-                imgui.EndChild()
-            end
+                        if not extra.browserId then
+                            extra.browserId = math.random(1000, 9999)
+                            webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
+                            webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
+                        end
 
-            imgui.Spacing()
+                        webview.setPos(extra.browserId, pos.x, pos.y)
+                        webview.setSize(extra.browserId, imgSize, imgSize)
+                        webview.setVisible(extra.browserId, true)
 
-            -- 🔹 Nombre centrado
-            local displayName = f.name:gsub("%.lua$", "")
-            imgui.CenterText(displayName)
-            imgui.Spacing()
-
-            -- Verificar si está instalado
-            local savePath = getWorkingDirectory() .. "/" .. f.name
-            local isInstalled = fileExists(savePath)
-            local label = isInstalled and "Ver info" or "Descargar"
-
-            if not isInstalled then
-                imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))
-                imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
-                imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
-            end
-
-            if isInstalled and f.name ~= "GamePatch.lua" then
-                local key = f.name:gsub("%.lua$", "")
-
-                if scriptConfig.scripts[key] == nil then
-                    scriptConfig.scripts[key] = true
-                    scfg.save(scriptConfig)
-                end
-
-                if scriptEnabled[key] == nil then
-                    scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
-                    print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
+                    imgui.EndChild()
                 else
-                    scriptEnabled[key][0] = scriptConfig.scripts[key]
+                    imgui.Spacing()
+                    imgui.Spacing()
+                    local avail = imgui.GetContentRegionAvail()
+                    local imgSize = 90
+                    local offsetX = (avail.x - imgSize) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                    end
+
+                    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
+                    imgui.CenterText("Sin Icono")
+                    imgui.EndChild()
                 end
 
-                -- 🔹 Layout con checkbox + botón centrados
-                local checkSize = imgui.GetFrameHeight()
-                local btnWidth = imgui.CalcTextSize(label).x + 20
-                local totalWidth = checkSize + 6 + btnWidth
-                local avail = imgui.GetContentRegionAvail()
-                local offsetX = (avail.x - totalWidth) / 2
-                if offsetX > 0 then
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                imgui.Spacing()
+
+                -- 🔹 Nombre centrado
+                local displayName = f.name:gsub("%.lua$", "")
+                imgui.CenterText(displayName)
+                imgui.Spacing()
+
+                -- Verificar si está instalado
+                local savePath = getWorkingDirectory() .. "/" .. f.name
+                local isInstalled = fileExists(savePath)
+                local label = isInstalled and "Ver info" or "Descargar"
+
+                if not isInstalled then
+                    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))
+                    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
+                    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
                 end
 
-                imgui.BeginGroup()
+                if isInstalled and f.name ~= "GamePatch.lua" then
+                    local key = f.name:gsub("%.lua$", "")
 
-                    if imgui.Checkbox("##"..key, scriptEnabled[key]) then
-                        scriptConfig.scripts[key] = scriptEnabled[key][0]
+                    if scriptConfig.scripts[key] == nil then
+                        scriptConfig.scripts[key] = true
                         scfg.save(scriptConfig)
+                    end
 
-                        if scriptEnabled[key][0] then
-                            local path = getWorkingDirectory() .. "/" .. f.name
-                            script.load(path)
-                        else
-                            for _, scr in ipairs(script.list()) do
-                                if scr.path:find(f.name, 1, true) then
-                                    script.unload(scr)
-                                    break
+                    if scriptEnabled[key] == nil then
+                        scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
+                        print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
+                    else
+                        scriptEnabled[key][0] = scriptConfig.scripts[key]
+                    end
+
+                    -- 🔹 Layout con checkbox + botón centrados
+                    local checkSize = imgui.GetFrameHeight()
+                    local btnWidth = imgui.CalcTextSize(label).x + 20
+                    local totalWidth = checkSize + 6 + btnWidth
+                    local avail = imgui.GetContentRegionAvail()
+                    local offsetX = (avail.x - totalWidth) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                    end
+
+                    imgui.BeginGroup()
+
+                        if imgui.Checkbox("##"..key, scriptEnabled[key]) then
+                            scriptConfig.scripts[key] = scriptEnabled[key][0]
+                            scfg.save(scriptConfig)
+
+                            if scriptEnabled[key][0] then
+                                local path = getWorkingDirectory() .. "/" .. f.name
+                                script.load(path)
+                            else
+                                for _, scr in ipairs(script.list()) do
+                                    if scr.path:find(f.name, 1, true) then
+                                        script.unload(scr)
+                                        break
+                                    end
                                 end
                             end
                         end
+
+                        imgui.SameLine()
+
+                        if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
+                            -- 🔹 Ocultar icono de autor del mod anterior
+                            if selectedFile and scriptsInfo[selectedFile.name] and scriptsInfo[selectedFile.name].authorBrowserId then
+                                webview.setVisible(scriptsInfo[selectedFile.name].authorBrowserId, false)
+                            end
+
+                            selectedFile = f
+                            showInfoWindow[0] = true
+                        end
+
+                    imgui.EndGroup()
+
+                else
+                    -- 🔹 Solo el botón centrado
+                    local btnWidth = imgui.CalcTextSize(label).x + 20
+                    local avail = imgui.GetContentRegionAvail()
+                    local offsetX = (avail.x - btnWidth) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
                     end
 
-                    imgui.SameLine()
-
                     if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
+                        -- 🔹 Ocultar icono de autor del mod anterior
+                        if selectedFile and scriptsInfo[selectedFile.name] and scriptsInfo[selectedFile.name].authorBrowserId then
+                            webview.setVisible(scriptsInfo[selectedFile.name].authorBrowserId, false)
+                        end
+
                         selectedFile = f
                         showInfoWindow[0] = true
                     end
+                end
 
-                imgui.EndGroup()
+                if not isInstalled then
+                    imgui.PopStyleColor(3)
+                end
 
+            imgui.EndChild()
+
+            col = col + 1
+            if col < maxCols then
+                imgui.SameLine()
             else
-                -- 🔹 Solo el botón centrado
-                local btnWidth = imgui.CalcTextSize(label).x + 20
-                local avail = imgui.GetContentRegionAvail()
-                local offsetX = (avail.x - btnWidth) / 2
-                if offsetX > 0 then
-                    imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-                end
-
-                if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
-                    selectedFile = f
-                    showInfoWindow[0] = true
-                end
+                col = 0
             end
+        end
 
-            if not isInstalled then
-                imgui.PopStyleColor(3)
+        -- 🔹 Navegación de páginas
+        if totalPages > 1 then
+            imgui.Separator()
+            local avail = imgui.GetContentRegionAvail()
+            local btnWidth = 80
+            local totalWidth = btnWidth * 2 + 20
+            local offsetX = (avail.x - totalWidth) / 2
+            if offsetX > 0 then imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX) end
+
+            if imgui.Button("◀ Anterior", imgui.ImVec2(btnWidth, 30)) then
+                if currentPage > 1 then currentPage = currentPage - 1 end
             end
-
-        imgui.EndChild()
-
-        col = col + 1
-        if col < maxCols then
             imgui.SameLine()
-        else
-            col = 0
-        end
-    end
+            if imgui.Button("Siguiente ▶", imgui.ImVec2(btnWidth, 30)) then
+                if currentPage < totalPages then currentPage = currentPage + 1 end
+            end
 
-    -- 🔹 Navegación de páginas
-    if totalPages > 1 then
-        imgui.Separator()
-        local avail = imgui.GetContentRegionAvail()
-        local btnWidth = 80
-        local totalWidth = btnWidth * 2 + 20
-        local offsetX = (avail.x - totalWidth) / 2
-        if offsetX > 0 then imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX) end
-
-        if imgui.Button("◀ Anterior", imgui.ImVec2(btnWidth, 30)) then
-            if currentPage > 1 then currentPage = currentPage - 1 end
-        end
-        imgui.SameLine()
-        if imgui.Button("Siguiente ▶", imgui.ImVec2(btnWidth, 30)) then
-            if currentPage < totalPages then currentPage = currentPage + 1 end
+            imgui.SameLine()
+            imgui.Text(string.format("Página %d / %d", currentPage, totalPages))
         end
 
-        imgui.SameLine()
-        imgui.Text(string.format("Página %d / %d", currentPage, totalPages))
-    end
-    -- 🔹 Ocultar íconos que no están en la página actual
-for i, info in ipairs(repoFiles) do
-    if scriptsInfo[info.name] and scriptsInfo[info.name].browserId then
-        if i < startIndex or i > endIndex then
-            webview.setVisible(scriptsInfo[info.name].browserId, false)
+        -- 🔹 Ocultar íconos que no están en la página actual
+        for i, info in ipairs(repoFiles) do
+            if scriptsInfo[info.name] and scriptsInfo[info.name].browserId then
+                if i < startIndex or i > endIndex then
+                    webview.setVisible(scriptsInfo[info.name].browserId, false)
+                end
+            end
         end
-    end
-end
 
-
-    -- 🔹 Al cerrar el menú principal, ocultar todos los webviews de íconos
-    if not windowState[0] then
-        for _, info in pairs(scriptsInfo) do
-            if info.browserId then
-                webview.setVisible(info.browserId, false)
+        -- 🔹 Al cerrar el menú principal, ocultar todos los webviews de íconos
+        if not windowState[0] then
+            for _, info in pairs(scriptsInfo) do
+                if info.browserId then
+                    webview.setVisible(info.browserId, false)
+                end
+                if info.authorBrowserId then
+                    webview.setVisible(info.authorBrowserId, false)
+                end
             end
         end
     end
-end
 
-
-    if isDownloading then
+      if isDownloading then
         imgui.Separator()
         imgui.Text("Descargando: " .. currentDownload)
 
@@ -713,6 +725,7 @@ end
         imgui.PopStyleColor()
     end
 end
+
 
 local scriptStatusCache = {}
 
@@ -857,29 +870,64 @@ local infoFrame = imgui.OnFrame(
                 imgui.Text(displayName)
                 imgui.PopFont()
                 
-                imgui.PushFont(font3)
-                if extra then
-                    imgui.Text(" By: " .. s(extra.author))
-                else
-                    imgui.Text(" By: N/A")
-                end
-                imgui.PopFont()
+                -- 🔹 Contenedor horizontal (imagen + textos del autor)
+                imgui.BeginChild("##row_author", imgui.ImVec2(0, 70), false)
+                    local totalWidth = imgui.GetContentRegionAvail().x
+                    local imgSize = 50
+                    local gap = 10
+
+                    -- Columna izquierda: imagen
+                    imgui.BeginChild("##img_author", imgui.ImVec2(imgSize, imgSize), false)
+                        if extra and extra.icon and extra.icon ~= "" then
+                            local pos = imgui.GetCursorScreenPos()
+
+                            if not extra.authorBrowserId then
+                                extra.authorBrowserId = math.random(10000, 99999)
+                                webview.createBrowser(extra.authorBrowserId, "data:text/html," .. makeHtml(extra.icon))
+                                webview.setSetting(extra.authorBrowserId, "setJavaScriptEnabled", false)
+                            end
+
+                            webview.setPos(extra.authorBrowserId, pos.x, pos.y)
+                            webview.setSize(extra.authorBrowserId, imgSize, imgSize)
+                            webview.setVisible(extra.authorBrowserId, true)
+                        else
+                            imgui.CenterText("Sin\nIcono")
+                        end
+                    imgui.EndChild()
+
+                    imgui.SameLine()
+
+                    -- Columna derecha: textos
+                    imgui.BeginChild("##txt_author", imgui.ImVec2(totalWidth - imgSize - gap, imgSize), false)
+                        imgui.PushFont(font3)
+                        if extra then
+                            imgui.Text("By: " .. s(extra.author))
+                            imgui.Text("Versión: " .. s(extra.version or "N/A"))
+                        else
+                            imgui.Text("By: N/A")
+                            imgui.Text("Versión: N/A")
+                        end
+                        imgui.PopFont()
+                    imgui.EndChild()
+                imgui.EndChild()
 
                 imgui.NewLine()
                 imgui.PushFont(font2)
 
-              imgui.BeginChild("##techinfo", imgui.ImVec2(0, 150), true,
-                imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+                -- 🔹 Info técnica
+                imgui.BeginChild("##techinfo", imgui.ImVec2(0, 150), true,
+                    imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
 
-                imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
-                imgui.Spacing()
-                imgui.Text(fa.CALENDAR .. " Released: " .. s(extra and extra.released))
-                imgui.Spacing()
-                imgui.Text(fa.ROTATE .. " Updated: " .. s(extra and extra.updated))
-                imgui.Spacing()
-                imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.version))
+                    imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
+                    imgui.Spacing()
+                    imgui.Text(fa.CALENDAR .. " Released: " .. s(extra and extra.released))
+                    imgui.Spacing()
+                    imgui.Text(fa.ROTATE .. " Updated: " .. s(extra and extra.updated))
+                    imgui.Spacing()
+                    imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.version))
 
-            imgui.EndChild()
+                imgui.EndChild()
+
                 imgui.Spacing()
                 imgui.Spacing()
                 imgui.Text("Etiquetas")
@@ -920,7 +968,6 @@ local infoFrame = imgui.OnFrame(
                 else
                     imgui.Text("Sin etiquetas disponibles")
                 end
-
                 imgui.EndChild()
 
                 imgui.Spacing()
@@ -966,51 +1013,60 @@ local infoFrame = imgui.OnFrame(
                             showInfoWindow[0] = false
                         end
                     end
-                    imgui.EndChild()
-                    imgui.EndChild()
+                imgui.EndChild()
+            imgui.EndChild()
                     
             -- Espacio entre columnas
             imgui.SameLine()
             imgui.Dummy(imgui.ImVec2(gapBetween, 0))
             imgui.SameLine()
 
+            -- Columna derecha
             imgui.BeginChild("##rightpanel", imgui.ImVec2(rightWidth, childHeight), false,
             imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
 
-            if extra then
-                -- Botón "Descripción"
-                local label = fa.COMMENT_DOTS .. " Descripción"
+                if extra then
+                    -- Botón "Descripción"
+                    local label = fa.COMMENT_DOTS .. " Descripción"
 
-                local textSize = imgui.CalcTextSize(label)
-                local paddingX, paddingY = 20, 8
-                local buttonWidth  = textSize.x + paddingX
-                local buttonHeight = textSize.y + paddingY
+                    local textSize = imgui.CalcTextSize(label)
+                    local paddingX, paddingY = 20, 8
+                    local buttonWidth  = textSize.x + paddingX
+                    local buttonHeight = textSize.y + paddingY
 
-                imgui.Button(label, imgui.ImVec2(buttonWidth, buttonHeight))
-                imgui.Spacing()
-
-                -- Caja de descripción + créditos
-                imgui.BeginChild("##descriptionBox", imgui.ImVec2(0, 0), true,
-                    imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
-
-                    imgui.TextWrapped(fa.FILE_LINES .. " " .. s(extra.description))
+                    imgui.Button(label, imgui.ImVec2(buttonWidth, buttonHeight))
                     imgui.Spacing()
-                    imgui.Text("Créditos:")
-                    imgui.BulletText(s(extra.author))
-                    if extra.credits and type(extra.credits) == "table" then
-                        for _, c in ipairs(extra.credits) do
-                            imgui.BulletText(s(c))
+
+                    -- Caja de descripción + créditos
+                    imgui.BeginChild("##descriptionBox", imgui.ImVec2(0, 0), true,
+                        imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
+
+                        imgui.TextWrapped(fa.FILE_LINES .. " " .. s(extra.description))
+                        imgui.Spacing()
+                        imgui.Text("Créditos:")
+                        imgui.BulletText(s(extra.author))
+                        if extra.credits and type(extra.credits) == "table" then
+                            for _, c in ipairs(extra.credits) do
+                                imgui.BulletText(s(c))
+                            end
                         end
-                    end
 
-                imgui.EndChild()
-            else
-                imgui.TextWrapped("No hay información adicional")
-            end
+                    imgui.EndChild()
+                else
+                    imgui.TextWrapped("No hay información adicional")
+                end
 
-        imgui.EndChild()
-
+            imgui.EndChild()
             imgui.PopFont()
+
+            -- 🔹 Ocultar iconos de autor si cierras el infoFrame
+            if not showInfoWindow[0] then
+                for _, info in pairs(scriptsInfo) do
+                    if info.authorBrowserId then
+                        webview.setVisible(info.authorBrowserId, false)
+                    end
+                end
+            end
         end
         
         imgui.EndChild()
@@ -1110,15 +1166,18 @@ end
 
 function onScriptTerminate(script, quitGame)
     if script == thisScript() then
-        -- Apagar el webview principal (si existe)
+        -- 🔹 Apagar el webview principal (si existe)
         if browserId then
             webview.setVisible(browserId, false)
         end
 
-        -- Apagar todos los webviews creados para íconos de mods
+        -- 🔹 Apagar todos los webviews creados para íconos y autores
         for _, info in pairs(scriptsInfo) do
             if info.browserId then
                 webview.setVisible(info.browserId, false)
+            end
+            if info.authorBrowserId then
+                webview.setVisible(info.authorBrowserId, false)
             end
         end
     end
