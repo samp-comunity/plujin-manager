@@ -772,6 +772,7 @@ function Spinner(label, radius, thickness, color)
     end
     imgui.Dummy(imgui.ImVec2(radius * 2, radius * 2))
 end
+
 local infoFrame = imgui.OnFrame(
     function() return showInfoWindow[0] end,
     function(self)

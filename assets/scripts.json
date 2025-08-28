@@ -6,7 +6,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/GamePatch.png",
+      "icon": "",
       "tags": []
     },
     {
@@ -24,7 +24,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Keyboard.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/Keyboard.png",
+      "icon": "",
       "tags": ["Legal"]
     },
     {
@@ -33,7 +33,7 @@
       "author": "",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/MinecraftHud.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/MinecraftHud.png",
+      "icon": "",
       "tags": ["Legal"]
     },
     {
@@ -42,7 +42,7 @@
       "author": "The Monetloader Team",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Script_Manager.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/Script_Manager.png",
+      "icon": "",
       "tags": ["Legal", "Desarrollador"]
     },
     {
@@ -51,7 +51,7 @@
       "author": "",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/anims.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anims.png",
+      "icon": "",
       "tags": ["Legal"]
     },
     {
@@ -60,7 +60,7 @@
       "author": "MTG MODS",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/bind.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/bind.png",
+      "icon": "",
       "tags": ["Legal"]
     },
     {
@@ -78,7 +78,7 @@
       "author": "Mikano",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Commands_Helper.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/Commands_Helper.png",
+      "icon": "",
       "tags": ["Legal"]
     },
     {
@@ -87,7 +87,7 @@
       "author": "hnnssy",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/HP_bar.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/HP_bar.png",
+      "icon": "",
       "tags": ["Legal"]
     }
   ]
