@@ -14,6 +14,7 @@ local hook = require('monethook')
 local SaMemory = require("SAMemory")
 SaMemory.require("CCamera")
 local Camera = SaMemory.camera
+local scfg = require('jsoncfg')
 
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
@@ -30,20 +31,6 @@ local function loadLibrary(libName, optionalMessage)
 end
 
 local sc = loadLibrary 'supericon' 
-
----------------------- [ cfg ]----------------------
-local inicfg = require("inicfg")
-local directIni  = "GamePatch.ini"
-local ini = inicfg.load({
-	settings = {
-        theme = 0
-	}
-}, directIni )
-inicfg.save(ini, directIni)
-
-function save()
-    inicfg.save(ini, directIni)
-end
 
 local sw, sh = getScreenResolution()
 
@@ -76,6 +63,21 @@ function main()
     end
 	
 end
+
+local DEFAULT_SCRIPT_CONFIG = {
+    scripts = {}
+}
+
+local scriptConfig = scfg.load(DEFAULT_SCRIPT_CONFIG)
+
+-- tabla que guarda los bool de imgui
+local scriptEnabled = {}
+
+-- inicializamos los bool según el JSON
+for key, value in pairs(scriptConfig.scripts) do
+    scriptEnabled[key] = imgui.new.bool(value)
+end
+
 
 local selectedFile = nil
 local showInfoWindow = new.bool(false) -- usar ImGui bool
@@ -284,6 +286,19 @@ lua_thread.create(function()
     loadScriptsInfo()
 end)
 
+lua_thread.create(function()
+    wait(1000) -- esperamos 1s que terminen de cargar todos
+    for _, scr in ipairs(script.list()) do
+        local filename = scr.path:match("([^/\\]+)$") -- solo nombre
+        local key = filename:gsub("%.lua$", "")
+        if scriptConfig.scripts[key] ~= nil and not scriptConfig.scripts[key] then
+            print("[GamePatch] 🔴 Desactivando " .. filename .. " (guardado en config)")
+            script.unload(scr)
+        end
+    end
+end)
+
+
 
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
@@ -397,16 +412,15 @@ function renderDownloaderUI()
                 imgui.CenterText(displayName)
                 imgui.Spacing()
 
-                -- Verificar si el archivo ya existe en local
+                -- Verificar si ya está instalado
                 local savePath = getWorkingDirectory() .. "/" .. f.name
                 local isInstalled = fileExists(savePath)
                 local label = isInstalled and "Ver info" or "Descargar"
 
                 if not isInstalled then
-                    -- Botón azul para "Descargar"
-                    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))         -- normal
-                    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0)) -- hover
-                    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))  -- presionado
+                    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))
+                    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
+                    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
                 end
 
                 if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(-1, 30)) then
@@ -415,7 +429,50 @@ function renderDownloaderUI()
                 end
 
                 if not isInstalled then
-                    imgui.PopStyleColor(3) -- restaurar colores
+                    imgui.PopStyleColor(3)
+                end
+
+                            
+                if isInstalled and f.name ~= "GamePatch.lua" then
+                    -- quitar la extensión .lua → usamos como key
+                    local key = f.name:gsub("%.lua$", "")
+
+                    -- si no existe en config lo agregamos como true por defecto
+                -- si no existe en config lo agregamos como false por defecto
+                if scriptConfig.scripts[key] == nil then
+                    scriptConfig.scripts[key] = true
+                    scfg.save(scriptConfig)
+                end
+
+                -- inicializar solo una vez
+                if scriptEnabled[key] == nil then
+                    scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
+                    print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
+                else
+                    -- 🔹 sincronizar con el JSON por si recargas script
+                    scriptEnabled[key][0] = scriptConfig.scripts[key]
+                end
+
+                    imgui.Spacing()
+                    if imgui.Checkbox(" Activado##"..key, scriptEnabled[key]) then
+                        -- guardar cambio en JSON
+                        scriptConfig.scripts[key] = scriptEnabled[key][0]
+                        scfg.save(scriptConfig)
+
+                        if scriptEnabled[key][0] then
+                            -- Activar
+                            local path = getWorkingDirectory() .. "/" .. f.name
+                            script.load(path)
+                        else
+                            -- Desactivar
+                            for _, scr in ipairs(script.list()) do
+                                if scr.path:find(f.name, 1, true) then
+                                    script.unload(scr)
+                                    break
+                                end
+                            end
+                        end
+                    end
                 end
 
             imgui.EndChild()

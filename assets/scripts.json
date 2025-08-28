@@ -1,6 +1,14 @@
 {
   "mods": [
     {
+      "name": "GamePatch.lua",
+      "description": "MarketPlace",
+      "author": "vxnzz",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
+      "tags": []
+    },
+    {
       "name": "GameFixer.lua",
       "description": "",
       "author": "vxnzz",
@@ -57,12 +65,12 @@
       "tags": ["Cheat"]
     },
     {
-      "name": "GamePatch.lua",
-      "description": "MarketPlace",
-      "author": "vxnzz",
+      "name": "Commands_Helper.lua",
+      "description": "Mod de chetos",
+      "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
-      "tags": []
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Commands_Helper.lua",
+      "tags": ["Legal"]
     }
   ]
 }
