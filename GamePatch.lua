@@ -66,7 +66,6 @@ function main()
 end
 
 local browserId = 99
-local windowVisible = imgui.new.bool(false)
 
 local imageUrl = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png"
 
@@ -444,7 +443,7 @@ function renderDownloaderUI()
     else
         -- Mostrar mods en cuadritos tipo grid
         local itemWidth = 200
-        local itemHeight = 220
+        local itemHeight = 250
         local spacing = 15
         local winSize = imgui.GetWindowSize()
         local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
@@ -453,42 +452,56 @@ function renderDownloaderUI()
         for _, f in ipairs(repoFiles) do
             imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
 
-            local extra = scriptsInfo[f.name]
+                imgui.NewLine()
+                local extra = scriptsInfo[f.name]
 
-            -- 🔹 Sub-child exclusivo para la imagen (tamaño fijo 126x126)
-            if extra and extra.icon and extra.icon ~= "" then
-                imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(126, 126), true)
-
-                    local pos = imgui.GetCursorScreenPos()
-
-                    -- Crear webview único para este mod si no existe
-                    if not extra.browserId then
-                        extra.browserId = math.random(1000, 9999) -- ID único
-                        webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
-                        webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
+                -- 🔹 Imagen centrada
+                if extra and extra.icon and extra.icon ~= "" then
+                    local avail = imgui.GetContentRegionAvail()
+                    local imgSize = 90
+                    local offsetX = (avail.x - imgSize) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
                     end
 
-                    -- Posicionar y ajustar imagen al sub-child
-                    webview.setPos(extra.browserId, pos.x, pos.y)
-                    webview.setSize(extra.browserId, 126, 126)
-                    webview.setVisible(extra.browserId, true)
+                    imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
 
-                imgui.EndChild()
-            else
-                -- 🔹 Si no hay icono, dejar cuadro vacío del mismo tamaño
-                imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(126, 126), true)
-                imgui.CenterText("Sin Icono")
-                imgui.EndChild()
-            end
+                        local pos = imgui.GetCursorScreenPos()
 
-            imgui.Spacing()
+                        if not extra.browserId then
+                            extra.browserId = math.random(1000, 9999)
+                            webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
+                            webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
+                        end
 
-            -- 🔹 Nombre debajo de la imagen
-            local displayName = f.name:gsub("%.lua$", "")
-            imgui.CenterText(displayName)
-            imgui.Spacing()
+                        webview.setPos(extra.browserId, pos.x, pos.y)
+                        webview.setSize(extra.browserId, imgSize, imgSize)
+                        webview.setVisible(extra.browserId, true)
 
-                -- Verificar si ya está instalado
+                    imgui.EndChild()
+                else
+                    imgui.Spacing()
+                    imgui.Spacing()
+                    local avail = imgui.GetContentRegionAvail()
+                    local imgSize = 90
+                    local offsetX = (avail.x - imgSize) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                    end
+
+                    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
+                    imgui.CenterText("Sin Icono")
+                    imgui.EndChild()
+                end
+
+                imgui.Spacing()
+
+                -- 🔹 Nombre centrado
+                local displayName = f.name:gsub("%.lua$", "")
+                imgui.CenterText(displayName)
+                imgui.Spacing()
+
+                -- Verificar si está instalado
                 local savePath = getWorkingDirectory() .. "/" .. f.name
                 local isInstalled = fileExists(savePath)
                 local label = isInstalled and "Ver info" or "Descargar"
@@ -499,57 +512,81 @@ function renderDownloaderUI()
                     imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
                 end
 
-                if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(-1, 30)) then
-                    selectedFile = f
-                    showInfoWindow[0] = true
+                if isInstalled and f.name ~= "GamePatch.lua" then
+                    local key = f.name:gsub("%.lua$", "")
+
+                    if scriptConfig.scripts[key] == nil then
+                        scriptConfig.scripts[key] = true
+                        scfg.save(scriptConfig)
+                    end
+
+                    if scriptEnabled[key] == nil then
+                        scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
+                        print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
+                    else
+                        scriptEnabled[key][0] = scriptConfig.scripts[key]
+                    end
+
+                    -- 🔹 Layout con checkbox + botón centrados
+                    local checkSize = imgui.GetFrameHeight()          -- ancho/alto del checkbox
+                    local btnWidth = imgui.CalcTextSize(label).x + 20
+                    local totalWidth = checkSize + 6 + btnWidth      -- checkbox + espacio + botón
+                    local avail = imgui.GetContentRegionAvail()
+                    local offsetX = (avail.x - totalWidth) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                    end
+
+                    -- 🔹 Begin para agrupar horizontal
+                    imgui.BeginGroup()
+
+                        -- Checkbox sin texto
+                        if imgui.Checkbox("##"..key, scriptEnabled[key]) then
+                            scriptConfig.scripts[key] = scriptEnabled[key][0]
+                            scfg.save(scriptConfig)
+
+                            if scriptEnabled[key][0] then
+                                local path = getWorkingDirectory() .. "/" .. f.name
+                                script.load(path)
+                            else
+                                for _, scr in ipairs(script.list()) do
+                                    if scr.path:find(f.name, 1, true) then
+                                        script.unload(scr)
+                                        break
+                                    end
+                                end
+                            end
+                        end
+
+                        imgui.SameLine()
+
+                        -- Botón
+                        if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
+                            selectedFile = f
+                            showInfoWindow[0] = true
+                        end
+
+                    imgui.EndGroup()
+
+                else
+                    -- 🔹 Solo el botón centrado
+                    local btnWidth = imgui.CalcTextSize(label).x + 20
+                    local avail = imgui.GetContentRegionAvail()
+                    local offsetX = (avail.x - btnWidth) / 2
+                    if offsetX > 0 then
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                    end
+
+                    if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
+                        selectedFile = f
+                        showInfoWindow[0] = true
+                    end
                 end
 
                 if not isInstalled then
                     imgui.PopStyleColor(3)
                 end
 
-                            
-                if isInstalled and f.name ~= "GamePatch.lua" then
-                    -- quitar la extensión .lua → usamos como key
-                    local key = f.name:gsub("%.lua$", "")
-
-                    -- si no existe en config lo agregamos como true por defecto
-                -- si no existe en config lo agregamos como false por defecto
-                if scriptConfig.scripts[key] == nil then
-                    scriptConfig.scripts[key] = true
-                    scfg.save(scriptConfig)
-                end
-
-                -- inicializar solo una vez
-                if scriptEnabled[key] == nil then
-                    scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
-                    print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
-                else
-                    -- 🔹 sincronizar con el JSON por si recargas script
-                    scriptEnabled[key][0] = scriptConfig.scripts[key]
-                end
-
-                    imgui.Spacing()
-                    if imgui.Checkbox(" Activado##"..key, scriptEnabled[key]) then
-                        -- guardar cambio en JSON
-                        scriptConfig.scripts[key] = scriptEnabled[key][0]
-                        scfg.save(scriptConfig)
-
-                        if scriptEnabled[key][0] then
-                            -- Activar
-                            local path = getWorkingDirectory() .. "/" .. f.name
-                            script.load(path)
-                        else
-                            -- Desactivar
-                            for _, scr in ipairs(script.list()) do
-                                if scr.path:find(f.name, 1, true) then
-                                    script.unload(scr)
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end
 
             imgui.EndChild()
 
@@ -560,6 +597,16 @@ function renderDownloaderUI()
                 col = 0
             end
         end
+
+        -- 🔹 Al cerrar el menú principal, ocultar todos los webviews de íconos
+        if not windowState[0] then
+            for _, info in pairs(scriptsInfo) do
+                if info.browserId then
+                    webview.setVisible(info.browserId, false)
+                end
+            end
+        end
+
     end
 
     if isDownloading then
@@ -1023,44 +1070,19 @@ function fileExists(filePath)
     end
 end
 
-
-
-imgui.OnFrame(function() return windowVisible[0] end, function()
-    imgui.SetNextWindowSize(imgui.ImVec2(128, 128), imgui.Cond.Always)
-    local io = imgui.GetIO()
-    imgui.SetNextWindowPos(imgui.ImVec2((io.DisplaySize.x - 128) / 2, (io.DisplaySize.y - 128) / 2), imgui.Cond.Always)
-
-    local flags = imgui.WindowFlags.NoResize +
-                  imgui.WindowFlags.NoMove +
-                  imgui.WindowFlags.NoCollapse +
-                  imgui.WindowFlags.NoScrollbar +
-                  imgui.WindowFlags.NoBackground +
-                  imgui.WindowFlags.NoTitleBar 
-
-    if imgui.Begin("Imagen de Internet", windowVisible, flags) then
-        local avail = imgui.GetContentRegionAvail()
-        local pos   = imgui.GetCursorScreenPos()
-
-        initImageWebview(imageUrl)
-        webview.setPos(browserId, pos.x, pos.y)
-        webview.setSize(browserId, avail.x, avail.y)
-        webview.setVisible(browserId, true)
-    end
-    imgui.End()
-
-    if not windowVisible[0] then
-        webview.setVisible(browserId, false)
-    end
-end)
-
-sampRegisterChatCommand("gp", function()
-    windowVisible[0] = not windowVisible[0]
-    webview.setVisible(browserId, windowVisible[0])
-end)
-
 function onScriptTerminate(script, quitGame)
     if script == thisScript() then
-        webview.setVisible(browserId, false)
+        -- Apagar el webview principal (si existe)
+        if browserId then
+            webview.setVisible(browserId, false)
+        end
+
+        -- Apagar todos los webviews creados para íconos de mods
+        for _, info in pairs(scriptsInfo) do
+            if info.browserId then
+                webview.setVisible(info.browserId, false)
+            end
+        end
     end
 end
 
