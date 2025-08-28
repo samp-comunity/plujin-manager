@@ -1,5 +1,5 @@
 ﻿script_name("KeyBoard")
-script_author("_vxnzz")
+script_author("vxnzz")
 script_version("1.0")
 --==================================== 
 

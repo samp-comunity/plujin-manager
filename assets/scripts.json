@@ -3,7 +3,7 @@
     {
       "name": "GameFixer.lua",
       "description": "",
-      "author": "_vxnzz",
+      "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/GameFixer.lua",
       "tags": ["Legal", "Utilidad"]
@@ -11,7 +11,7 @@
     {
       "name": "Keyboard.lua",
       "description": "Muestra un teclado en pantalla configurable estilo PC",
-      "author": "_vxnzz",
+      "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Legal/Keyboard.lua",
       "tags": ["Legal"]
@@ -51,7 +51,7 @@
     {
       "name": "Cipher.lua",
       "description": "Mod de chetos",
-      "author": "_vxnzz",
+      "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/scripts/ilegal/Cipher.lua",
       "tags": ["Cheat"]
@@ -59,7 +59,7 @@
     {
       "name": "GamePatch.lua",
       "description": "MarketPlace",
-      "author": "_vxnzz",
+      "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
       "tags": []

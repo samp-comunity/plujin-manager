@@ -1,5 +1,5 @@
 ﻿script_name("GamePatch")
-script_author("_vxnzz")
+script_author("vxnzz")
 script_version("1.0")
 --==================================== 
 
@@ -195,6 +195,7 @@ function refreshRepoFiles()
     repoFiles = {}
 
     lua_thread.create(function()
+        local tempList = {}
         -- 🔹 scriptsInfo ya tiene los mods desde el JSON
         for name, info in pairs(scriptsInfo) do
             local include = true
@@ -222,15 +223,31 @@ function refreshRepoFiles()
 
             -- si pasa filtros → agregar
             if include then
-                table.insert(repoFiles, { name = name, url = info.url })
+                table.insert(tempList, { name = name, url = info.url })
             end
             wait(0)
+        end
+
+        -- 🔹 ordenar alfabéticamente los que no son "GamePatch.lua"
+        table.sort(tempList, function(a, b)
+            return a.name:lower() < b.name:lower()
+        end)
+
+        -- 🔹 armar repoFiles con fijo primero
+        repoFiles = {}
+        for i, f in ipairs(tempList) do
+            if f.name == "GamePatch.lua" then
+                table.insert(repoFiles, 1, f) -- siempre en la posición 1
+            else
+                table.insert(repoFiles, f)
+            end
         end
 
         print("[Downloader] ✅ Lista actualizada con " .. tostring(#repoFiles) .. " archivos")
         isRefreshing = false
     end)
 end
+
 
 -- 🔹 llamada inicial: al iniciar el script siempre actualiza la lista
 lua_thread.create(function()
@@ -350,6 +367,7 @@ function renderDownloaderUI()
     end
 
     imgui.Separator()
+    imgui.NewLine()
 
     if isRefreshing then
         local winSize = imgui.GetWindowSize()
@@ -365,8 +383,8 @@ function renderDownloaderUI()
         Spinner("##refreshspinner", spinnerSize, spinnerThickness, imgui.ImVec4(1, 1, 1, 1))
     else
         -- Mostrar mods en cuadritos tipo grid
-        local itemWidth = 150
-        local itemHeight = 100
+        local itemWidth = 200
+        local itemHeight = 220
         local spacing = 15
         local winSize = imgui.GetWindowSize()
         local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
@@ -613,7 +631,7 @@ local infoFrame = imgui.OnFrame(
             imgui.Columns(2, nil, false)
 
             -- Columna izquierda (info técnica en cajita fija)
-            imgui.BeginChild("##leftinfo", imgui.ImVec2(220, 150), true,
+            imgui.BeginChild("##leftinfo", imgui.ImVec2(300, 150), true,
                 imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
                 imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
                 imgui.Spacing()
@@ -650,30 +668,28 @@ local infoFrame = imgui.OnFrame(
             imgui.Text("Etiquetas")
             imgui.Spacing()
 
-            -- 🔹 Cajita para etiquetas
-            imgui.BeginChild("##tagsinfo", imgui.ImVec2(220, 70), true,
+            imgui.BeginChild("##tagsinfo", imgui.ImVec2(300, 70), true,
                 imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
 
-            if extra and extra.tags and type(extra.tags) == "table" then
+            if extra and extra.tags and type(extra.tags) == "table" and next(extra.tags) ~= nil then
+                local first = true
                 for _, tag in ipairs(extra.tags) do
                     local colores = coloresEtiquetas[string.lower(tag)]
                     if colores then
-                        -- Usar color opaco (apagado)
                         imgui.PushStyleColor(imgui.Col.Button, colores.off)
                         imgui.PushStyleColor(imgui.Col.ButtonHovered, colores.off)
                         imgui.PushStyleColor(imgui.Col.ButtonActive, colores.off)
-                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1)) -- texto gris
+                        imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
                     else
-                        -- fallback gris
                         imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
                         imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
                         imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.4, 0.4, 0.4, 0.3))
                         imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.7, 0.7, 0.7, 1))
                     end
 
-                    imgui.SameLine()
+                    if not first then imgui.SameLine() end
+                    first = false
 
-                    -- 🔹 Ajustar ancho al texto + padding
                     local textSize = imgui.CalcTextSize(tag)
                     local paddingX, paddingY = 20, 8
                     local buttonWidth  = textSize.x + paddingX
@@ -684,17 +700,16 @@ local infoFrame = imgui.OnFrame(
                     imgui.PopStyleColor(4)
                 end
             else
-                imgui.Text("Etiquetas: N/A")
+                imgui.Text("Sin etiquetas disponibles")
             end
 
             imgui.EndChild()
-
 
             imgui.Spacing()
             imgui.Text("Administrar")
             imgui.Spacing()
 
-            imgui.BeginChild("##actions", imgui.ImVec2(220, 70), true,
+            imgui.BeginChild("##actions", imgui.ImVec2(300, 70), true,
                 imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoScrollWithMouse)
                 local status = getScriptStatus(selectedFile)
                 if status == "checking" then
