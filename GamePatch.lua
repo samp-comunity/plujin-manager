@@ -65,48 +65,6 @@ function main()
 	
 end
 
-local browserId = 99
-
-local imageUrl = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png"
-
--- HTML que ajusta la imagen al contenedor
-local function makeHtml(url)
-    return [[
-    <html>
-    <head>
-    <style>
-    body, html {
-        margin: 0;
-        padding: 0;
-        background-color: black;
-        overflow: hidden;
-        width: 100%;
-        height: 100%;
-    }
-    img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover; /* "contain" = ajusta sin cortar | "cover" = llena cortando */
-    }
-    </style>
-    </head>
-    <body>
-    <img src="]] .. url .. [[" />
-    </body>
-    </html>
-    ]]
-end
-
-local initDone = false  
-
-local function initImageWebview(url)
-    if not initDone then
-        webview.createBrowser(browserId, "data:text/html," .. makeHtml(url))
-        webview.setSetting(browserId, "setJavaScriptEnabled", false)
-        initDone = true
-    end
-end
-
 
 local DEFAULT_SCRIPT_CONFIG = {
     scripts = {}
@@ -477,17 +435,7 @@ function renderDownloaderUI()
 
                     imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
 
-                        local pos = imgui.GetCursorScreenPos()
-
-                        if not extra.browserId then
-                            extra.browserId = math.random(1000, 9999)
-                            webview.createBrowser(extra.browserId, "data:text/html," .. makeHtml(extra.icon))
-                            webview.setSetting(extra.browserId, "setJavaScriptEnabled", false)
-                        end
-
-                        webview.setPos(extra.browserId, pos.x, pos.y)
-                        webview.setSize(extra.browserId, imgSize, imgSize)
-                        webview.setVisible(extra.browserId, true)
+                       
 
                     imgui.EndChild()
                 else
@@ -570,11 +518,6 @@ function renderDownloaderUI()
                         imgui.SameLine()
 
                         if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
-                            -- 🔹 Ocultar icono de autor del mod anterior
-                            if selectedFile and scriptsInfo[selectedFile.name] and scriptsInfo[selectedFile.name].authorBrowserId then
-                                webview.setVisible(scriptsInfo[selectedFile.name].authorBrowserId, false)
-                            end
-
                             selectedFile = f
                             showInfoWindow[0] = true
                         end
@@ -591,11 +534,6 @@ function renderDownloaderUI()
                     end
 
                     if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
-                        -- 🔹 Ocultar icono de autor del mod anterior
-                        if selectedFile and scriptsInfo[selectedFile.name] and scriptsInfo[selectedFile.name].authorBrowserId then
-                            webview.setVisible(scriptsInfo[selectedFile.name].authorBrowserId, false)
-                        end
-
                         selectedFile = f
                         showInfoWindow[0] = true
                     end
@@ -615,7 +553,6 @@ function renderDownloaderUI()
             end
         end
 
-        -- 🔹 Navegación de páginas
         if totalPages > 1 then
             imgui.Separator()
             local avail = imgui.GetContentRegionAvail()
@@ -636,26 +573,6 @@ function renderDownloaderUI()
             imgui.Text(string.format("Página %d / %d", currentPage, totalPages))
         end
 
-        -- 🔹 Ocultar íconos que no están en la página actual
-        for i, info in ipairs(repoFiles) do
-            if scriptsInfo[info.name] and scriptsInfo[info.name].browserId then
-                if i < startIndex or i > endIndex then
-                    webview.setVisible(scriptsInfo[info.name].browserId, false)
-                end
-            end
-        end
-
-        -- 🔹 Al cerrar el menú principal, ocultar todos los webviews de íconos
-        if not windowState[0] then
-            for _, info in pairs(scriptsInfo) do
-                if info.browserId then
-                    webview.setVisible(info.browserId, false)
-                end
-                if info.authorBrowserId then
-                    webview.setVisible(info.authorBrowserId, false)
-                end
-            end
-        end
     end
 
       if isDownloading then
@@ -878,21 +795,7 @@ local infoFrame = imgui.OnFrame(
 
                     -- Columna izquierda: imagen
                     imgui.BeginChild("##img_author", imgui.ImVec2(imgSize, imgSize), false)
-                        if extra and extra.icon and extra.icon ~= "" then
-                            local pos = imgui.GetCursorScreenPos()
-
-                            if not extra.authorBrowserId then
-                                extra.authorBrowserId = math.random(10000, 99999)
-                                webview.createBrowser(extra.authorBrowserId, "data:text/html," .. makeHtml(extra.icon))
-                                webview.setSetting(extra.authorBrowserId, "setJavaScriptEnabled", false)
-                            end
-
-                            webview.setPos(extra.authorBrowserId, pos.x, pos.y)
-                            webview.setSize(extra.authorBrowserId, imgSize, imgSize)
-                            webview.setVisible(extra.authorBrowserId, true)
-                        else
-                            imgui.CenterText("Sin\nIcono")
-                        end
+                       
                     imgui.EndChild()
 
                     imgui.SameLine()
@@ -1058,15 +961,6 @@ local infoFrame = imgui.OnFrame(
 
             imgui.EndChild()
             imgui.PopFont()
-
-            -- 🔹 Ocultar iconos de autor si cierras el infoFrame
-            if not showInfoWindow[0] then
-                for _, info in pairs(scriptsInfo) do
-                    if info.authorBrowserId then
-                        webview.setVisible(info.authorBrowserId, false)
-                    end
-                end
-            end
         end
         
         imgui.EndChild()
@@ -1166,23 +1060,9 @@ end
 
 function onScriptTerminate(script, quitGame)
     if script == thisScript() then
-        -- 🔹 Apagar el webview principal (si existe)
-        if browserId then
-            webview.setVisible(browserId, false)
-        end
-
-        -- 🔹 Apagar todos los webviews creados para íconos y autores
-        for _, info in pairs(scriptsInfo) do
-            if info.browserId then
-                webview.setVisible(info.browserId, false)
-            end
-            if info.authorBrowserId then
-                webview.setVisible(info.authorBrowserId, false)
-            end
-        end
+        
     end
 end
-
 
 ------------[IMGUI]------------
 function imgui.Link(url)
