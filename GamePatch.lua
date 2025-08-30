@@ -107,7 +107,7 @@ local selectedFile = nil
 local showInfoWindow = new.bool(false) -- usar ImGui bool
 -- 🔹 Estados de paginación
 local currentPage = 1
-local itemsPerPage = 6   -- o 8 si prefieres
+local itemsPerPage = 8   -- o 8 si prefieres
 
 
 local repoFiles = {}
@@ -285,49 +285,6 @@ lua_thread.create(function()
     refreshRepoFiles()
 end)
 
-function loadScriptsInfo()
-    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
-    local body, code = https.request(url)
-    if code == 200 and body then
-        local data, _, err = json.decode(body, 1, nil)
-        if not err and type(data) == "table" and data.mods then
-            scriptsInfo = {} -- limpiar antes de recargar
-            for _, mod in ipairs(data.mods) do
-                scriptsInfo[mod.name] = mod
-            end
-            print("[Downloader] ✅ Datos extra cargados de scripts.json")
-        else
-            print("[Downloader] ❌ Error al decodificar scripts.json")
-        end
-    else
-        print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
-    end
-
-    -- 🔹 reconstruir etiquetas dinámicas
-    buildEtiquetas()
-
-    -- 🔹 refrescar lista con nuevas etiquetas
-    refreshRepoFiles()
-end
-
-lua_thread.create(function()
-    loadScriptsInfo()
-end)
-
-lua_thread.create(function()
-    wait(1000) -- esperamos 1s que terminen de cargar todos
-    for _, scr in ipairs(script.list()) do
-        local filename = scr.path:match("([^/\\]+)$") -- solo nombre
-        local key = filename:gsub("%.lua$", "")
-        if scriptConfig.scripts[key] ~= nil and not scriptConfig.scripts[key] then
-            print("[GamePatch] 🔴 Desactivando " .. filename .. " (guardado en config)")
-            script.unload(scr)
-        end
-    end
-end)
-
-
-
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
 
@@ -397,6 +354,69 @@ function downloadFile(url, filename)
     print("[Downloader] ✅ Descarga terminada: " .. savePath)
     return true
 end
+
+
+function loadScriptsInfo()
+    local url = "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/scripts.json"
+    local body, code = https.request(url)
+    if code == 200 and body then
+        local data, _, err = json.decode(body, 1, nil)
+        if not err and type(data) == "table" and data.mods then
+            scriptsInfo = {} -- limpiar antes de recargar
+            for _, mod in ipairs(data.mods) do
+                scriptsInfo[mod.name] = mod
+
+                -- 🔹 Ruta local del icono
+                if mod.icon and mod.icon ~= "" then
+                    local localIcon = basePath .. "/icons/" .. mod.name .. ".png"
+                    scriptsInfo[mod.name].iconFile = localIcon
+
+                    -- si no existe el archivo → descargarlo
+                    if not doesFileExist(localIcon) then
+                        lua_thread.create(function()
+                            downloadFile(mod.icon, "resource/icons/" .. mod.name .. ".png")
+                        end)
+                    else
+                        -- si ya existe, crear la textura
+                        scriptsInfo[mod.name].img = imgui.CreateTextureFromFile(localIcon)
+                    end
+                end
+            end
+            print("[Downloader] ✅ Datos extra cargados de scripts.json")
+        else
+            print("[Downloader] ❌ Error al decodificar scripts.json")
+        end
+    else
+        print("[Downloader] ❌ No se pudo cargar scripts.json, code: " .. tostring(code))
+    end
+
+    -- 🔹 reconstruir etiquetas dinámicas
+    buildEtiquetas()
+
+    -- 🔹 refrescar lista con nuevas etiquetas
+    refreshRepoFiles()
+end
+
+
+lua_thread.create(function()
+    loadScriptsInfo()
+end)
+
+lua_thread.create(function()
+    wait(1000) -- esperamos 1s que terminen de cargar todos
+    for _, scr in ipairs(script.list()) do
+        local filename = scr.path:match("([^/\\]+)$") -- solo nombre
+        local key = filename:gsub("%.lua$", "")
+        if scriptConfig.scripts[key] ~= nil and not scriptConfig.scripts[key] then
+            print("[GamePatch] 🔴 Desactivando " .. filename .. " (guardado en config)")
+            script.unload(scr)
+        end
+    end
+end)
+
+
+
+
 -- renderDownloaderUI con cuadritos y botón "Descargar" en azul
 function renderDownloaderUI()
     imgui.Separator()
@@ -425,179 +445,230 @@ function renderDownloaderUI()
         imgui.SetCursorPos(imgui.ImVec2(centerX, centerY))
         Spinner("##refreshspinner", spinnerSize, spinnerThickness, imgui.ImVec4(1, 1, 1, 1))
     else
-        -- Mostrar mods en cuadritos tipo grid (con paginación)
+      -- Medidas de cada item
         local itemWidth = 200
         local itemHeight = 250
-        local spacing = 15
-        local winSize = imgui.GetWindowSize()
-        local maxCols = math.max(1, math.floor((winSize.x - 40) / (itemWidth + spacing)))
+        local spacing = 0
 
-        -- cálculos de páginas
+        -- Tamaño de ventana
+        local winSize = imgui.GetWindowSize()
+        local maxCols = math.max(1, math.min(4, math.floor((winSize.x - 40) / (itemWidth + spacing))))
+
+
+        -- Paginación
         local totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
         local startIndex = (currentPage - 1) * itemsPerPage + 1
         local endIndex = math.min(startIndex + itemsPerPage - 1, #repoFiles)
 
-        local col = 0
-        for i = startIndex, endIndex do
-            local f = repoFiles[i]
+        -- 🔹 Calcular filas necesarias en esta página
+        local numItems = endIndex - startIndex + 1
+        local rows = math.ceil(numItems / maxCols)
 
-            imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), true)
+        -- 🔹 Ancho y alto del contenedor padre
+        local parentWidth = winSize.x * 1
 
-                imgui.NewLine()
-                local extra = scriptsInfo[f.name]
+        -- 🔹 Centrar horizontalmente
+        local avail = imgui.GetContentRegionAvail()
+        local offsetX = (avail.x - parentWidth) / 2
+        if offsetX > 0 then
+            imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+        end
 
-                local imgSize = 90
-                if extra and extra.icon and extra.icon ~= "" and Image.img then
-                    -- centrar el cuadrado del icono dentro del begin grande
-                    local avail = imgui.GetContentRegionAvail()
-                    local offsetX = (avail.x - imgSize) / 2
+        local parentHeight = 600
+        imgui.BeginChild("##mods_parent", imgui.ImVec2(parentWidth, parentHeight), false)
+
+            local col = 0
+            for i = startIndex, endIndex do
+                local f = repoFiles[i]
+
+                -- 🔹 Si es el primer item de la fila, aplicar centrado REAL
+                -- 🔹 Si es el primer item de la fila, aplicar centrado REAL por fila
+                if col == 0 then
+                    local itemsLeft = math.min(maxCols, endIndex - i + 1) -- cuantos quedan en esta fila
+                    local rowWidth = itemsLeft * (itemWidth + spacing) - spacing
+
+                    -- ancho real del contenedor padre
+                    local parentContentWidth = imgui.GetWindowContentRegionWidth()
+
+                    local offsetX = (parentContentWidth - rowWidth) / 2
                     if offsetX > 0 then
                         imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
                     end
+                end
 
-                    imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
-                        imgui.Image(Image.img, imgui.ImVec2(imgSize, imgSize))
-                    imgui.EndChild()
-                else
-                    local avail = imgui.GetContentRegionAvail()
+                imgui.PushStyleColor(imgui.Col.ChildBg, imgui.ImVec4(0.15, 0.15, 0.15, 1.0)) 
+                imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), false)
+
+                    imgui.NewLine()
                     local imgSize = 90
-                    local offsetX = (avail.x - imgSize) / 2
-                    if offsetX > 0 then
-                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX) -- centra el cuadrado
+local extra = scriptsInfo[f.name]
+
+if extra and extra.img then
+    -- 🔹 centrar el cuadrado del icono dentro del begin grande
+    local avail = imgui.GetContentRegionAvail()
+    local offsetX = (avail.x - imgSize) / 2
+    if offsetX > 0 then
+        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+    end
+
+    imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
+        imgui.Image(extra.img, imgui.ImVec2(imgSize, imgSize))
+    imgui.EndChild()
+else
+    -- 🔹 si aún no se descargó el icono → mostrar spinner placeholder
+    local avail = imgui.GetContentRegionAvail()
+    local offsetX = (avail.x - imgSize) / 2
+    if offsetX > 0 then
+        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+    end
+
+    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
+        local spinnerSize = 20
+        local spinnerThickness = 2.5
+
+        local childSize = imgui.GetWindowSize()
+        local posX = childSize.x / 2
+        local posY = childSize.y / 2
+
+        imgui.SetCursorPos(imgui.ImVec2(posX, posY))
+        Spinner("##checkspinner_" .. f.name, spinnerSize, spinnerThickness, imgui.ImVec4(1,1,1,1))
+    imgui.EndChild()
+end
+
+                    imgui.Spacing()
+
+                    -- 🔹 Nombre centrado
+                    local displayName = f.name:gsub("%.lua$", "")
+                    imgui.CenterText(displayName)
+                    imgui.Spacing()
+
+                    -- Verificar si está instalado
+                    local savePath = getWorkingDirectory() .. "/" .. f.name
+                    local isInstalled = fileExists(savePath)
+                    local label = isInstalled and "Ver info" or "Descargar"
+
+                    if not isInstalled then
+                        imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))
+                        imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
+                        imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
                     end
 
-                    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
-                        local spinnerSize = 20
-                        local spinnerThickness = 2.5
+                    if isInstalled and f.name ~= "GamePatch.lua" then
+                        local key = f.name:gsub("%.lua$", "")
 
-                        local childSize = imgui.GetWindowSize()
-                        local posX = childSize.x / 2
-                        local posY = childSize.y / 2
-
-                        imgui.SetCursorPos(imgui.ImVec2(posX, posY))
-                        Spinner("##checkspinner_" .. f.name, spinnerSize, spinnerThickness, imgui.ImVec4(1,1,1,1))
-                    imgui.EndChild()
-                end
-
-                imgui.Spacing()
-
-                -- 🔹 Nombre centrado
-                local displayName = f.name:gsub("%.lua$", "")
-                imgui.CenterText(displayName)
-                imgui.Spacing()
-
-                -- Verificar si está instalado
-                local savePath = getWorkingDirectory() .. "/" .. f.name
-                local isInstalled = fileExists(savePath)
-                local label = isInstalled and "Ver info" or "Descargar"
-
-                if not isInstalled then
-                    imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0))
-                    imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
-                    imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
-                end
-
-                if isInstalled and f.name ~= "GamePatch.lua" then
-                    local key = f.name:gsub("%.lua$", "")
-
-                    if scriptConfig.scripts[key] == nil then
-                        scriptConfig.scripts[key] = true
-                        scfg.save(scriptConfig)
-                    end
-
-                    if scriptEnabled[key] == nil then
-                        scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
-                        print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
-                    else
-                        scriptEnabled[key][0] = scriptConfig.scripts[key]
-                    end
-
-                    -- 🔹 Layout con checkbox + botón centrados
-                    local checkSize = imgui.GetFrameHeight()
-                    local btnWidth = imgui.CalcTextSize(label).x + 20
-                    local totalWidth = checkSize + 6 + btnWidth
-                    local avail = imgui.GetContentRegionAvail()
-                    local offsetX = (avail.x - totalWidth) / 2
-                    if offsetX > 0 then
-                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-                    end
-
-                    imgui.BeginGroup()
-
-                        if imgui.Checkbox("##"..key, scriptEnabled[key]) then
-                            scriptConfig.scripts[key] = scriptEnabled[key][0]
+                        if scriptConfig.scripts[key] == nil then
+                            scriptConfig.scripts[key] = true
                             scfg.save(scriptConfig)
+                        end
 
-                            if scriptEnabled[key][0] then
-                                local path = getWorkingDirectory() .. "/" .. f.name
-                                script.load(path)
-                            else
-                                for _, scr in ipairs(script.list()) do
-                                    if scr.path:find(f.name, 1, true) then
-                                        script.unload(scr)
-                                        break
+                        if scriptEnabled[key] == nil then
+                            scriptEnabled[key] = imgui.new.bool(scriptConfig.scripts[key])
+                            print("[DEBUG] Creado checkbox para "..key.." con valor:", scriptConfig.scripts[key])
+                        else
+                            scriptEnabled[key][0] = scriptConfig.scripts[key]
+                        end
+
+                        -- 🔹 Layout con checkbox + botón centrados
+                        local checkSize = imgui.GetFrameHeight()
+                        local btnWidth = imgui.CalcTextSize(label).x + 20
+                        local totalWidth = checkSize + 6 + btnWidth
+                        local avail = imgui.GetContentRegionAvail()
+                        local offsetX = (avail.x - totalWidth) / 2
+                        if offsetX > 0 then
+                            imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                        end
+
+                        imgui.BeginGroup()
+
+                            if imgui.Checkbox("##"..key, scriptEnabled[key]) then
+                                scriptConfig.scripts[key] = scriptEnabled[key][0]
+                                scfg.save(scriptConfig)
+
+                                if scriptEnabled[key][0] then
+                                    local path = getWorkingDirectory() .. "/" .. f.name
+                                    script.load(path)
+                                else
+                                    for _, scr in ipairs(script.list()) do
+                                        if scr.path:find(f.name, 1, true) then
+                                            script.unload(scr)
+                                            break
+                                        end
                                     end
                                 end
                             end
-                        end
 
-                        imgui.SameLine()
+                            imgui.SameLine()
+
+                            if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
+                                selectedFile = f
+                                showInfoWindow[0] = true
+                            end
+
+                        imgui.EndGroup()
+
+                    else
+                        -- 🔹 Solo el botón centrado
+                        local btnWidth = imgui.CalcTextSize(label).x + 20
+                        local avail = imgui.GetContentRegionAvail()
+                        local offsetX = (avail.x - btnWidth) / 2
+                        if offsetX > 0 then
+                            imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                        end
 
                         if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
                             selectedFile = f
                             showInfoWindow[0] = true
                         end
+                    end
 
-                    imgui.EndGroup()
+                    if not isInstalled then
+                        imgui.PopStyleColor(3)
+                    end
 
+                imgui.EndChild()
+                imgui.PopStyleColor()
+
+                col = col + 1
+                if col < maxCols then
+                    imgui.SameLine()
                 else
-                    -- 🔹 Solo el botón centrado
-                    local btnWidth = imgui.CalcTextSize(label).x + 20
-                    local avail = imgui.GetContentRegionAvail()
-                    local offsetX = (avail.x - btnWidth) / 2
-                    if offsetX > 0 then
-                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-                    end
+                    col = 0
+                end
+            end
 
-                    if imgui.Button(label .. "##" .. f.name, imgui.ImVec2(btnWidth, 30)) then
-                        selectedFile = f
-                        showInfoWindow[0] = true
+            if totalPages > 1 then
+                -- 🔹 Medidas
+                local btnWidth, btnHeight = 100, 30
+                local winSize = imgui.GetWindowSize()
+                local contentMin = imgui.GetWindowContentRegionMin()
+                local contentMax = imgui.GetWindowContentRegionMax()
+
+                -- 🔹 Posición vertical (centrado respecto al parentHeight)
+                local parentY = parentHeight / 2
+                local offsetY = parentY - (btnHeight / 2)
+
+                -- Guardar cursor actual
+                local oldCursor = imgui.GetCursorPos()
+
+                -- 🔹 Botón "Anterior" → izquierda (solo si currentPage > 1)
+                if currentPage > 1 then
+                    imgui.SetCursorPos(imgui.ImVec2(contentMin.x, offsetY))
+                    if imgui.Button("◀ Anterior", imgui.ImVec2(btnWidth, btnHeight)) then
+                        currentPage = currentPage - 1
                     end
                 end
 
-                if not isInstalled then
-                    imgui.PopStyleColor(3)
+                -- 🔹 Botón "Siguiente" → derecha (solo si currentPage < totalPages)
+                if currentPage < totalPages then
+                    imgui.SetCursorPos(imgui.ImVec2(contentMax.x - btnWidth, offsetY))
+                    if imgui.Button("Siguiente ▶", imgui.ImVec2(btnWidth, btnHeight)) then
+                        currentPage = currentPage + 1
+                    end
                 end
 
-            imgui.EndChild()
-
-            col = col + 1
-            if col < maxCols then
-                imgui.SameLine()
-            else
-                col = 0
-            end
-        end
-
-        if totalPages > 1 then
-            imgui.Separator()
-            local avail = imgui.GetContentRegionAvail()
-            local btnWidth = 80
-            local totalWidth = btnWidth * 2 + 20
-            local offsetX = (avail.x - totalWidth) / 2
-            if offsetX > 0 then imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX) end
-
-            if imgui.Button("◀ Anterior", imgui.ImVec2(btnWidth, 30)) then
-                if currentPage > 1 then currentPage = currentPage - 1 end
-            end
-            imgui.SameLine()
-            if imgui.Button("Siguiente ▶", imgui.ImVec2(btnWidth, 30)) then
-                if currentPage < totalPages then currentPage = currentPage + 1 end
             end
 
-            imgui.SameLine()
-            imgui.Text(string.format("Página %d / %d", currentPage, totalPages))
-        end
+        imgui.EndChild()
 
     end
 
@@ -1231,6 +1302,12 @@ end
 ---------------------- [Load fonts/theme]----------------------
 imgui.OnInitialize(function()
     SwitchTheStyle()
+    for name, info in pairs(scriptsInfo) do
+    if info.iconFile and doesFileExist(info.iconFile) then
+        info.img = imgui.CreateTextureFromFile(info.iconFile)
+    end
+end
+
 
     local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesDefault()
     local fontPath = getWorkingDirectory()  .. "/resource/fonts/"
