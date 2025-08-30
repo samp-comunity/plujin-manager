@@ -34,7 +34,6 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/MinecraftHud.lua",
       "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/minecraft.jpg",
-      "repo": "Nelson-hast/plujin-manager",
       "tags": ["Legal"]
     },
     {
@@ -97,7 +96,7 @@
       "author": "ADOLFSAMP",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/ANTI-FCRASH.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.png",
+      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.jpg",
       "tags": ["Legal"]
     }
   ]
