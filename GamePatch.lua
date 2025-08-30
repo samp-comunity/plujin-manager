@@ -50,11 +50,6 @@ local basePath = getWorkingDirectory() .. "/resource"
 lfs.mkdir(basePath)
 lfs.mkdir(basePath .. "/icons")
 
-local Image = {
-    file = 'resource/icons/gamefixer.png',
-    url = 'https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png',
-    img = nil
-}
 ---------------------- [Function main]----------------------
 function main()
 	local fileName = getWorkingDirectory() .. "/GamePatch.lua"
@@ -66,15 +61,6 @@ function main()
 		thisScript():unload()
 	end
     repeat wait(0) until isSampAvailable()
-    
-    if not doesFileExist(Image.file) then
-        local dlstatus = require('moonloader').download_status
-        downloadFile(Image.url, Image.file, function (id, status, p1, p2)
-            if status == dlstatus.STATUSEX_ENDDOWNLOAD then
-                thisScript():reload()
-            end
-        end)
-    end
 
    while true do
         if isWidgetSwipedRight(WIDGET_RADAR) then
@@ -86,6 +72,7 @@ function main()
 end
 
 
+local pendingTextures = {}
 
 
 local DEFAULT_SCRIPT_CONFIG = {
@@ -287,8 +274,7 @@ end)
 
 -- 🔽 en vez de solo uno, usamos lista acumulativa
 local installedPending = {}
-
-function downloadFile(url, filename)
+function downloadFile(url, filename, onFinish)
     local savePath = getWorkingDirectory() .. "/" .. filename
     local file = io.open(savePath, "wb")
     if not file then
@@ -352,6 +338,12 @@ function downloadFile(url, filename)
     showRestartPrompt = true
 
     print("[Downloader] ✅ Descarga terminada: " .. savePath)
+
+    -- 🔹 si pasaste un callback, se ejecuta al terminar la descarga
+    if onFinish then
+        onFinish(filename)
+    end
+
     return true
 end
 
@@ -371,15 +363,18 @@ function loadScriptsInfo()
                     local localIcon = basePath .. "/icons/" .. mod.name .. ".png"
                     scriptsInfo[mod.name].iconFile = localIcon
 
-                    -- si no existe el archivo → descargarlo
                     if not doesFileExist(localIcon) then
-                        lua_thread.create(function()
-                            downloadFile(mod.icon, "resource/icons/" .. mod.name .. ".png")
-                        end)
-                    else
-                        -- si ya existe, crear la textura
-                        scriptsInfo[mod.name].img = imgui.CreateTextureFromFile(localIcon)
-                    end
+    lua_thread.create(function()
+        downloadFile(mod.icon, "resource/icons/" .. mod.name .. ".png", function()
+            table.insert(pendingTextures, {name = mod.name, path = localIcon})
+        end)
+    end)
+else
+    scriptsInfo[mod.name].iconFile = localIcon
+    -- la textura se cargará después, en el render
+end
+
+
                 end
             end
             print("[Downloader] ✅ Datos extra cargados de scripts.json")
@@ -502,6 +497,10 @@ function renderDownloaderUI()
                     imgui.NewLine()
                     local imgSize = 90
 local extra = scriptsInfo[f.name]
+
+if extra and extra.iconFile and not extra.img and doesFileExist(extra.iconFile) then
+    extra.img = imgui.CreateTextureFromFile(extra.iconFile)
+end
 
 if extra and extra.img then
     -- 🔹 centrar el cuadrado del icono dentro del begin grande
@@ -673,8 +672,6 @@ end
     end
 
     imgui.Spacing()
-
-    imgui.Image(Image.img, imgui.ImVec2(100, 100))
 
       if isDownloading then
         imgui.Separator()
@@ -1323,10 +1320,6 @@ end
     loadSCFont(20, true)
 	logofont = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "font2.otf", 45, nil, glyph_ranges)
 	loadFAFont("solid", 30, true)
-
-    if doesFileExist(Image.file) then
-        Image.img = imgui.CreateTextureFromFile(Image.file)
-    end
 
 end)
 

@@ -24,7 +24,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Keyboard.lua",
-      "icon": "",
+      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/keyboard.png",
       "tags": ["Legal"]
     },
     {
@@ -50,6 +50,7 @@
       "description": "",
       "author": "",
       "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/anims.lua",
       "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anims.jpg",
       "tags": ["Legal"]
     },
@@ -58,6 +59,7 @@
       "description": "",
       "author": "MTG MODS",
       "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/bind.lua",
       "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/bind.jpeg",
       "tags": ["Legal"]
     },
@@ -75,6 +77,7 @@
       "description": "Permite crear botones personalizados para los comandos que más usan, como me, do, entre otros. Se puede modificar el color y la posición de cada botón.\nNota: Cuando agregues comandos, no incluyas la barra diagonal (/).",
       "author": "Mikano",
       "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Commands_Helper.lua",
       "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/commands_helper.png",
       "tags": ["Legal"]
     },
@@ -84,7 +87,7 @@
       "author": "hnnssy",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/HP_bar.lua",
-      "icon": "",
+      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
       "tags": ["Legal"]
     }
   ]
