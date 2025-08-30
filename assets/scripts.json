@@ -90,6 +90,15 @@
       "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/HP_bar.lua",
       "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
       "tags": ["Legal"]
+    },
+    {
+      "name": "ANTI-FCRASH.lua",
+      "description": "Evita que los PC y los androides te crashean.",
+      "author": "ADOLFSAMP",
+      "downloads": 0,
+      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/ANTI-FCRASH.lua",
+      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.png",
+      "tags": ["Legal"]
     }
   ]
 }
