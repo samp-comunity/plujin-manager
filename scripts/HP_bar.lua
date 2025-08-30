@@ -1,6 +1,6 @@
 
 
--- Для автоматического включения скрипта измените значение переменной active ( ниже ) на 1, для автоматического выключения на 0
+-- пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ active ( пїЅпїЅпїЅпїЅ ) пїЅпїЅ 1, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ 0
 
 
     active = 1
@@ -10,7 +10,7 @@
 
 
 
-script_name("HPbar")
+script_name("HP_bar")
 script_description("example of using drawBar function")
 script_version_number(1)
 script_version("v.001")
@@ -21,7 +21,7 @@ function main()
     while not isSampAvailable() do wait(100) end
     local font = renderCreateFont("Arial", 12, 7)
     sampRegisterChatCommand("hp", activatecmd)
-    sampAddChatMessage("[{FF0000}HP bar{FFFFFF}]: HP bar успешно загружен! Для вкл/выкл скрипта: {FF0000}/hp", -1)
+    sampAddChatMessage("[{FF0000}HP bar{FFFFFF}]: HP bar пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ! пїЅпїЅпїЅ пїЅпїЅпїЅ/пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ: {FF0000}/hp", -1)
     while true do
         wait(0)
         if not isPauseMenuActive() and isPlayerPlaying(playerHandle) then

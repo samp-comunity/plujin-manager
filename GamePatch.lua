@@ -334,15 +334,18 @@ function downloadFile(url, filename, onFinish)
     clearStatusCache()
 
     -- 🔽 en vez de 1 archivo, acumulamos varios
+  -- 🔹 si pasaste un callback, se ejecuta al terminar la descarga
+if onFinish then
+    onFinish(filename)
+end
+
+-- 🔹 Solo marcar como "pendiente de reinicio" si es un script .lua
+if filename:match("%.lua$") then
     table.insert(installedPending, filename)
     showRestartPrompt = true
+end
 
-    print("[Downloader] ✅ Descarga terminada: " .. savePath)
-
-    -- 🔹 si pasaste un callback, se ejecuta al terminar la descarga
-    if onFinish then
-        onFinish(filename)
-    end
+print("[Downloader] ✅ Descarga terminada: " .. savePath)
 
     return true
 end
@@ -496,43 +499,43 @@ function renderDownloaderUI()
 
                     imgui.NewLine()
                     local imgSize = 90
-local extra = scriptsInfo[f.name]
+                    local extra = scriptsInfo[f.name]
 
-if extra and extra.iconFile and not extra.img and doesFileExist(extra.iconFile) then
-    extra.img = imgui.CreateTextureFromFile(extra.iconFile)
-end
+                    if extra and extra.iconFile and not extra.img and doesFileExist(extra.iconFile) then
+                        extra.img = imgui.CreateTextureFromFile(extra.iconFile)
+                    end
 
-if extra and extra.img then
-    -- 🔹 centrar el cuadrado del icono dentro del begin grande
-    local avail = imgui.GetContentRegionAvail()
-    local offsetX = (avail.x - imgSize) / 2
-    if offsetX > 0 then
-        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-    end
+                    if extra and extra.img then
+                        -- 🔹 centrar el cuadrado del icono dentro del begin grande
+                        local avail = imgui.GetContentRegionAvail()
+                        local offsetX = (avail.x - imgSize) / 2
+                        if offsetX > 0 then
+                            imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                        end
 
-    imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
-        imgui.Image(extra.img, imgui.ImVec2(imgSize, imgSize))
-    imgui.EndChild()
-else
-    -- 🔹 si aún no se descargó el icono → mostrar spinner placeholder
-    local avail = imgui.GetContentRegionAvail()
-    local offsetX = (avail.x - imgSize) / 2
-    if offsetX > 0 then
-        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
-    end
+                        imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
+                            imgui.Image(extra.img, imgui.ImVec2(imgSize, imgSize))
+                        imgui.EndChild()
+                    else
+                        -- 🔹 si aún no se descargó el icono → mostrar spinner placeholder
+                        local avail = imgui.GetContentRegionAvail()
+                        local offsetX = (avail.x - imgSize) / 2
+                        if offsetX > 0 then
+                            imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                        end
 
-    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
-        local spinnerSize = 20
-        local spinnerThickness = 2.5
+                        imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
+                            local spinnerSize = 20
+                            local spinnerThickness = 2.5
 
-        local childSize = imgui.GetWindowSize()
-        local posX = childSize.x / 2
-        local posY = childSize.y / 2
+                            local childSize = imgui.GetWindowSize()
+                            local posX = childSize.x / 2
+                            local posY = childSize.y / 2
 
-        imgui.SetCursorPos(imgui.ImVec2(posX, posY))
-        Spinner("##checkspinner_" .. f.name, spinnerSize, spinnerThickness, imgui.ImVec4(1,1,1,1))
-    imgui.EndChild()
-end
+                            imgui.SetCursorPos(imgui.ImVec2(posX, posY))
+                            Spinner("##checkspinner_" .. f.name, spinnerSize, spinnerThickness, imgui.ImVec4(1,1,1,1))
+                        imgui.EndChild()
+                    end
 
                     imgui.Spacing()
 
@@ -890,14 +893,26 @@ local infoFrame = imgui.OnFrame(
                 imgui.BeginChild("##row_author", imgui.ImVec2(0, 70), false)
                     local totalWidth = imgui.GetContentRegionAvail().x
                     local imgSize = 50
-                    local gap = 10
+                    local gap = 15
 
                     -- Columna izquierda: imagen
                     imgui.BeginChild("##img_author", imgui.ImVec2(imgSize, imgSize), false)
-                       
+                        if extra and extra.iconFile and doesFileExist(extra.iconFile) then
+                            if not extra.img then
+                                extra.img = imgui.CreateTextureFromFile(extra.iconFile)
+                            end
+                            if extra.img then
+                                imgui.Image(extra.img, imgui.ImVec2(imgSize, imgSize))
+                            else
+                                Spinner("##spinner_author_" .. selectedFile.name, 14, 2.5, imgui.ImVec4(1,1,1,1))
+                            end
+                        else
+                            Spinner("##spinner_author_" .. (selectedFile and selectedFile.name or "unknown"), 14, 2.5, imgui.ImVec4(1,1,1,1))
+                        end
                     imgui.EndChild()
 
-                    imgui.SameLine()
+
+                    imgui.SameLine(0, gap)
 
                     -- Columna derecha: textos
                     imgui.BeginChild("##txt_author", imgui.ImVec2(totalWidth - imgSize - gap, imgSize), false)
@@ -1300,10 +1315,10 @@ end
 imgui.OnInitialize(function()
     SwitchTheStyle()
     for name, info in pairs(scriptsInfo) do
-    if info.iconFile and doesFileExist(info.iconFile) then
-        info.img = imgui.CreateTextureFromFile(info.iconFile)
+        if info.iconFile and doesFileExist(info.iconFile) then
+            info.img = imgui.CreateTextureFromFile(info.iconFile)
+        end
     end
-end
 
 
     local glyph_ranges = imgui.GetIO().Fonts:GetGlyphRangesDefault()
