@@ -22,6 +22,7 @@ local json = require("dkjson")
 local socket = require("socket")
 local ssl = require("ssl")
 local webview   = require 'webviews'
+local lfs = require "lfs"
 
 local function loadLibrary(libName, optionalMessage)
     local success, lib = pcall(require, libName)
@@ -44,6 +45,16 @@ ffi.cdef[[
     void _Z12AND_OpenLinkPKc(const char* link);
 ]]
 
+-- ruta absoluta
+local basePath = getWorkingDirectory() .. "/resource"
+lfs.mkdir(basePath)
+lfs.mkdir(basePath .. "/icons")
+
+local Image = {
+    file = 'resource/icons/gamefixer.png',
+    url = 'https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png',
+    img = nil
+}
 ---------------------- [Function main]----------------------
 function main()
 	local fileName = getWorkingDirectory() .. "/GamePatch.lua"
@@ -56,6 +67,15 @@ function main()
 	end
     repeat wait(0) until isSampAvailable()
     
+    if not doesFileExist(Image.file) then
+        local dlstatus = require('moonloader').download_status
+        downloadFile(Image.url, Image.file, function (id, status, p1, p2)
+            if status == dlstatus.STATUSEX_ENDDOWNLOAD then
+                thisScript():reload()
+            end
+        end)
+    end
+
    while true do
         if isWidgetSwipedRight(WIDGET_RADAR) then
             windowState[0] = not windowState[0]
@@ -64,6 +84,8 @@ function main()
     end
 	
 end
+
+
 
 
 local DEFAULT_SCRIPT_CONFIG = {
@@ -424,32 +446,36 @@ function renderDownloaderUI()
                 imgui.NewLine()
                 local extra = scriptsInfo[f.name]
 
-                -- 🔹 Imagen centrada
-                if extra and extra.icon and extra.icon ~= "" then
+                local imgSize = 90
+                if extra and extra.icon and extra.icon ~= "" and Image.img then
+                    -- centrar el cuadrado del icono dentro del begin grande
                     local avail = imgui.GetContentRegionAvail()
-                    local imgSize = 90
                     local offsetX = (avail.x - imgSize) / 2
                     if offsetX > 0 then
                         imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
                     end
 
                     imgui.BeginChild("##icon_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
-
-                       
-
+                        imgui.Image(Image.img, imgui.ImVec2(imgSize, imgSize))
                     imgui.EndChild()
                 else
-                    imgui.Spacing()
-                    imgui.Spacing()
                     local avail = imgui.GetContentRegionAvail()
                     local imgSize = 90
                     local offsetX = (avail.x - imgSize) / 2
                     if offsetX > 0 then
-                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX)
+                        imgui.SetCursorPosX(imgui.GetCursorPosX() + offsetX) -- centra el cuadrado
                     end
 
-                    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), true)
-                    imgui.CenterText("Sin Icono")
+                    imgui.BeginChild("##icon_empty_" .. f.name, imgui.ImVec2(imgSize, imgSize), false)
+                        local spinnerSize = 20
+                        local spinnerThickness = 2.5
+
+                        local childSize = imgui.GetWindowSize()
+                        local posX = childSize.x / 2
+                        local posY = childSize.y / 2
+
+                        imgui.SetCursorPos(imgui.ImVec2(posX, posY))
+                        Spinner("##checkspinner_" .. f.name, spinnerSize, spinnerThickness, imgui.ImVec4(1,1,1,1))
                     imgui.EndChild()
                 end
 
@@ -574,6 +600,10 @@ function renderDownloaderUI()
         end
 
     end
+
+    imgui.Spacing()
+
+    imgui.Image(Image.img, imgui.ImVec2(100, 100))
 
       if isDownloading then
         imgui.Separator()
@@ -717,10 +747,9 @@ end
 function clearStatusCache()
     scriptStatusCache = {}
 end
-
 function Spinner(label, radius, thickness, color)
     local draw_list = imgui.GetWindowDrawList()
-    local pos = imgui.GetCursorScreenPos()
+    local center = imgui.GetCursorScreenPos()  -- ahora el cursor es el centro exacto
     local time = os.clock()
 
     local num_segments = 30
@@ -729,7 +758,6 @@ function Spinner(label, radius, thickness, color)
     local a_min = math.pi * 2 * start / num_segments
     local a_max = math.pi * 2 * (start + num_segments / 3) / num_segments
 
-    local center = imgui.ImVec2(pos.x + radius, pos.y + radius)
     for i = 0, num_segments do
         local a = a_min + (i / num_segments) * (a_max - a_min)
         local x = center.x + math.cos(a) * radius
@@ -737,8 +765,11 @@ function Spinner(label, radius, thickness, color)
         local col = imgui.GetColorU32Vec4(color)
         draw_list:AddCircleFilled(imgui.ImVec2(x, y), thickness, col)
     end
+
+    -- reserva espacio visual correcto
     imgui.Dummy(imgui.ImVec2(radius * 2, radius * 2))
 end
+
 
 local infoFrame = imgui.OnFrame(
     function() return showInfoWindow[0] end,
@@ -1215,6 +1246,11 @@ imgui.OnInitialize(function()
     loadSCFont(20, true)
 	logofont = imgui.GetIO().Fonts:AddFontFromFileTTF(fontPath .. "font2.otf", 45, nil, glyph_ranges)
 	loadFAFont("solid", 30, true)
+
+    if doesFileExist(Image.file) then
+        Image.img = imgui.CreateTextureFromFile(Image.file)
+    end
+
 end)
 
 function SwitchTheStyle()
