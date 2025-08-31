@@ -27,8 +27,6 @@ To use Plujin Marketplace:
 - Supports adding images/icons for each mod
 - Filter mods by tags or category
 
-https://static.wikia.nocookie.net/gtawiki/images/4/4a/RockstarGiphy.Com-GTASAde-sticker-15.gif/revision/latest/scale-to-width-down/250?cb=20211110002356
-
 ---
 
 ## Credits
