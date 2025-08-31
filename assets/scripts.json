@@ -5,8 +5,8 @@
       "description": "MarketPlace",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/GamePatch.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamepatch.jpeg",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/GamePatch.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamepatch.jpeg",
       "tags": []
     },
     {
@@ -14,8 +14,8 @@
       "description": "",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/GameFixer.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/gamefixer.png",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/GameFixer.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamefixer.png",
       "tags": ["Legal", "Utilidad"]
     },
     {
@@ -23,8 +23,8 @@
       "description": "Muestra un teclado en pantalla configurable estilo PC",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Keyboard.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/keyboard.png",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Keyboard.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/keyboard.png",
       "tags": ["Legal"]
     },
     {
@@ -32,8 +32,8 @@
       "description": "Como su nombre lo indica muestra un hud visual estilo como el de Minecraft",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/MinecraftHud.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/minecraft.jpg",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/MinecraftHud.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/minecraft.jpg",
       "tags": ["Legal"]
     },
     {
@@ -41,7 +41,7 @@
       "description": "",
       "author": "The Monetloader Team",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Script_Manager.lua",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Script_Manager.lua",
       "icon": "",
       "tags": ["Legal", "Desarrollador"]
     },
@@ -50,8 +50,8 @@
       "description": "",
       "author": "",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/anims.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anims.jpg",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/anims.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/anims.jpg",
       "tags": ["Legal"]
     },
     {
@@ -59,8 +59,8 @@
       "description": "",
       "author": "MTG MODS",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/bind.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/bind.jpeg",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/bind.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/bind.jpeg",
       "tags": ["Legal"]
     },
     {
@@ -68,8 +68,8 @@
       "description": "Mod de chetos",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Cipher.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/cipher.png",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Cipher.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/cipher.png",
       "tags": ["Cheat"]
     },
     {
@@ -77,8 +77,8 @@
       "description": "Permite crear botones personalizados para los comandos que más usan, como me, do, entre otros. Se puede modificar el color y la posición de cada botón.\nNota: Cuando agregues comandos, no incluyas la barra diagonal (/).",
       "author": "Mikano",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/Commands_Helper.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/commands_helper.png",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Commands_Helper.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/commands_helper.png",
       "tags": ["Legal"]
     },
     {
@@ -86,8 +86,8 @@
       "description": "Muestra una barra de vida y chaleco en el personaje.",
       "author": "hnnssy",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/HP_bar.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/HP_bar.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
       "tags": ["Legal"]
     },
     {
@@ -95,8 +95,8 @@
       "description": "Evita que los PC y los androides te crashean.",
       "author": "ADOLFSAMP",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/master/scripts/ANTI-FCRASH.lua",
-      "icon": "https://raw.githubusercontent.com/Nelson-hast/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.jpg",
+      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/ANTI-FCRASH.lua",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.jpg",
       "tags": ["Legal"]
     }
   ]
