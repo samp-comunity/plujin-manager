@@ -14,7 +14,7 @@
       "description": "",
       "author": "vxnzz",
       "downloads": 0,
-      "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/GameFixer.lua",
+      "url": "https://github.com/samp-comunity/gamefixer/releases/download/v1.0.0/GameFixer.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamefixer.png",
       "tags": ["Legal", "Utilidad"]
     },
