@@ -16,10 +16,7 @@
       "downloads": 0,
       "url": "https://github.com/samp-comunity/gamefixer/releases/download/v1.0.0/GameFixer.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamefixer.png",
-      "tags": [
-        "Legal",
-        "Utilidad"
-      ],
+      "tags": ["Legal", "Utilidad"],
       "total_downloads": 36,
       "created": "2025-09-02T17:33:14Z",
       "last_update": "2025-09-03T03:33:47Z",
@@ -32,9 +29,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Keyboard.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/keyboard.png",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "MinecraftHud.lua",
@@ -43,9 +38,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/MinecraftHud.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/minecraft.jpg",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "Script_Manager.lua",
@@ -54,10 +47,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Script_Manager.lua",
       "icon": "",
-      "tags": [
-        "Legal",
-        "Desarrollador"
-      ]
+      "tags": ["Legal", "Desarrollador"]
     },
     {
       "name": "anims.lua",
@@ -66,9 +56,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/anims.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/anims.jpg",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "bind.lua",
@@ -77,9 +65,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/bind.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/bind.jpeg",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "Cipher.lua",
@@ -88,9 +74,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Cipher.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/cipher.png",
-      "tags": [
-        "Cheat"
-      ]
+      "tags": ["Cheat"]
     },
     {
       "name": "Commands_Helper.lua",
@@ -99,9 +83,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Commands_Helper.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/commands_helper.png",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "HP_bar.lua",
@@ -110,9 +92,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/HP_bar.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     },
     {
       "name": "ANTI-FCRASH.lua",
@@ -121,9 +101,7 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/ANTI-FCRASH.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.jpg",
-      "tags": [
-        "Legal"
-      ]
+      "tags": ["Legal"]
     }
   ]
 }

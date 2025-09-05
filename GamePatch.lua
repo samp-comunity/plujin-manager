@@ -300,6 +300,7 @@ lua_thread.create(function()
 end)
 
 local installedPending = {}
+
 function downloadFile(url, filename, onFinish)
 	local savePath = getWorkingDirectory() .. "/" .. filename
 	local file = io.open(savePath, "wb")
@@ -333,6 +334,27 @@ function downloadFile(url, filename, onFinish)
 				local header_end = data:find("\r\n\r\n", 1, true)
 				if header_end then
 					local headers = data:sub(1, header_end)
+
+					-- 🔁 Manejar redirección (302/301)
+					local location = headers:match("Location: ([^\r\n]+)")
+					local status_code = headers:match("HTTP/%d+.%d+ (%d+)")
+					if
+						location
+						and (
+							status_code == "301"
+							or status_code == "302"
+							or status_code == "307"
+							or status_code == "308"
+						)
+					then
+						tcp:close()
+						file:close()
+						os.remove(savePath) -- limpiar archivo incompleto
+						print("[Downloader] 🔁 Redirigiendo a " .. location)
+						return downloadFile(location, filename, onFinish)
+					end
+
+					-- ✅ Procesar respuesta normal (200 OK)
 					totalSize = tonumber(headers:match("Content%-Length: (%d+)")) or 0
 					file:write(data:sub(header_end + 4))
 					received = #data - (header_end + 4)
@@ -342,6 +364,7 @@ function downloadFile(url, filename, onFinish)
 				file:write(buff)
 				received = received + #buff
 			end
+
 			if totalSize > 0 then
 				downloadProgress = received / totalSize
 			end
@@ -375,7 +398,7 @@ function downloadFile(url, filename, onFinish)
 end
 
 function loadScriptsInfo()
-	local url = "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/scripts.json"
+	local url = "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/scripts.json"
 	local body, code = https.request(url)
 	if code == 200 and body then
 		local data, _, err = json.decode(body, 1, nil)
@@ -920,76 +943,76 @@ function renderDownloaderUI()
 		end
 
 		imgui.EndChild()
-	end
+		imgui.EndChild()
+		imgui.BeginChild("##right_col", imgui.ImVec2(0, 100), true)
+		if isDownloading then
+			imgui.Separator()
+			imgui.Text("Descargando: " .. currentDownload)
 
-	imgui.Spacing()
+			-- ===== Config =====
+			local barSize = imgui.ImVec2(360, 22) -- barra más ancha
+			local spinnerRadius = 12 -- spinner más grande
+			local spinnerThickness = 3
+			local gap = 16 -- espacio entre spinner y barra
+			local gapText = 12 -- espacio entre barra y porcentaje
+			local leftPad = 6 -- margen izquierdo
 
-	if isDownloading then
-		imgui.Separator()
-		imgui.Text("Descargando: " .. currentDownload)
+			-- Alturas para centrar verticalmente spinner vs barra vs texto
+			local barH = barSize.y
+			local spinnerH = spinnerRadius * 2
+			local alignOffset = (barH - spinnerH) * 0.5
 
-		-- ===== Config =====
-		local barSize = imgui.ImVec2(360, 22) -- barra más ancha
-		local spinnerRadius = 12 -- spinner más grande
-		local spinnerThickness = 3
-		local gap = 16 -- espacio entre spinner y barra
-		local gapText = 12 -- espacio entre barra y porcentaje
-		local leftPad = 6 -- margen izquierdo
+			-- Porcentaje redondeado (0–100%)
+			local percentStr = tostring(math.floor(downloadProgress * 100 + 0.5)) .. "%"
 
-		-- Alturas para centrar verticalmente spinner vs barra vs texto
-		local barH = barSize.y
-		local spinnerH = spinnerRadius * 2
-		local alignOffset = (barH - spinnerH) * 0.5
+			-- Calcular ancho total del grupo
+			local textWidth = imgui.CalcTextSize(percentStr).x
+			local groupWidth = leftPad + spinnerH + gap + barSize.x + gapText + textWidth
+			local winWidth = imgui.GetWindowSize().x
 
-		-- Porcentaje redondeado (0–100%)
-		local percentStr = tostring(math.floor(downloadProgress * 100 + 0.5)) .. "%"
+			-- Centrar grupo en ventana
+			local startX = (winWidth - groupWidth) * 0.5
+			local baseY = imgui.GetCursorPosY()
 
-		-- Calcular ancho total del grupo
-		local textWidth = imgui.CalcTextSize(percentStr).x
-		local groupWidth = leftPad + spinnerH + gap + barSize.x + gapText + textWidth
-		local winWidth = imgui.GetWindowSize().x
+			imgui.BeginGroup()
+			-- imgui.spinner
+			imgui.SetCursorPos(imgui.ImVec2(startX + leftPad, baseY + alignOffset))
+			imgui.spinner("##downloadspinner", spinnerRadius, spinnerThickness, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
 
-		-- Centrar grupo en ventana
-		local startX = (winWidth - groupWidth) * 0.5
-		local baseY = imgui.GetCursorPosY()
+			-- Barra
+			imgui.SetCursorPos(imgui.ImVec2(startX + leftPad + spinnerH + gap, baseY))
+			imgui.ProgressBar(downloadProgress, barSize, "")
 
-		imgui.BeginGroup()
-		-- imgui.spinner
-		imgui.SetCursorPos(imgui.ImVec2(startX + leftPad, baseY + alignOffset))
-		imgui.spinner("##downloadspinner", spinnerRadius, spinnerThickness, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
-
-		-- Barra
-		imgui.SetCursorPos(imgui.ImVec2(startX + leftPad + spinnerH + gap, baseY))
-		imgui.ProgressBar(downloadProgress, barSize, "")
-
-		-- Texto porcentaje (ej: "42%")
-		local textHeight = imgui.CalcTextSize(percentStr).y
-		imgui.SetCursorPos(
-			imgui.ImVec2(startX + leftPad + spinnerH + gap + barSize.x + gapText, baseY + (barH - textHeight) * 0.5)
-		)
-		imgui.TextUnformatted(percentStr)
-		imgui.EndGroup()
-	end
-
-	if showRestartPrompt and #installedPending > 0 then
-		imgui.Separator()
-		imgui.Text("Instalados:")
-		for _, name in ipairs(installedPending) do
-			imgui.BulletText(name)
+			-- Texto porcentaje (ej: "42%")
+			local textHeight = imgui.CalcTextSize(percentStr).y
+			imgui.SetCursorPos(
+				imgui.ImVec2(startX + leftPad + spinnerH + gap + barSize.x + gapText, baseY + (barH - textHeight) * 0.5)
+			)
+			imgui.TextUnformatted(percentStr)
+			imgui.EndGroup()
 		end
 
-		imgui.Separator()
-		imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
-		imgui.Text("Reiniciar ahora")
-		if imgui.IsItemClicked(0) then
-			for _, filename in ipairs(installedPending) do
-				local path = getWorkingDirectory() .. "/" .. filename
-				script.load(path)
+		if showRestartPrompt and #installedPending > 0 then
+			imgui.Separator()
+			imgui.Text("Instalados:")
+			for _, name in ipairs(installedPending) do
+				imgui.BulletText(name)
 			end
-			installedPending = {}
-			showRestartPrompt = false
+
+			imgui.Separator()
+			imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
+			imgui.Text("Reiniciar ahora")
+			if imgui.IsItemClicked(0) then
+				for _, filename in ipairs(installedPending) do
+					local path = getWorkingDirectory() .. "/" .. filename
+					script.load(path)
+				end
+				installedPending = {}
+				showRestartPrompt = false
+			end
+			imgui.PopStyleColor()
 		end
-		imgui.PopStyleColor()
+		imgui.EndChild()
 	end
 end
 
@@ -1000,51 +1023,70 @@ function checkScriptRemote(file, callback)
 		local f = io.open(path, "rb")
 
 		if not f then
-			callback("missing") -- no existe localmente
+			callback("missing")
 			return
 		end
 
 		local localContent = f:read("*a")
 		f:close()
 
-		-- Si solo queremos detectar que está instalado, podemos devolverlo inmediatamente
 		if not file.url or file.url == "" then
 			callback("installed")
 			return
 		end
 
-		-- parsear URL
-		local host, pathUrl = file.url:match("https://([^/]+)(/.+)")
-		local tcp = assert(socket.tcp())
-		tcp:connect(host, 443)
-		tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
-		tcp:dohandshake()
+		local function fetchBody(url)
+			local host, pathUrl = url:match("https://([^/]+)(/.+)")
+			local tcp = assert(socket.tcp())
+			tcp:connect(host, 443)
+			tcp = ssl.wrap(tcp, { mode = "client", protocol = "tlsv1_2", verify = "none" })
+			tcp:dohandshake()
 
-		-- pedir archivo
-		tcp:send("GET " .. pathUrl .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\n\r\n")
+			tcp:send("GET " .. pathUrl .. " HTTP/1.1\r\nHost: " .. host .. "\r\nConnection: close\r\n\r\n")
 
-		local data, headers_done, body = "", false, ""
-		while true do
-			local chunk, status, partial = tcp:receive(1024)
-			local buff = chunk or partial
-			if buff and #buff > 0 then
-				data = data .. buff
-				if not headers_done then
-					local header_end = data:find("\r\n\r\n", 1, true)
-					if header_end then
-						headers_done = true
-						body = data:sub(header_end + 4)
+			local data, headers_done, body = "", false, ""
+			while true do
+				local chunk, status, partial = tcp:receive(1024)
+				local buff = chunk or partial
+				if buff and #buff > 0 then
+					data = data .. buff
+					if not headers_done then
+						local header_end = data:find("\r\n\r\n", 1, true)
+						if header_end then
+							headers_done = true
+							local headers = data:sub(1, header_end)
+							body = data:sub(header_end + 4)
+
+							-- 🔁 Manejo de redirección (302/301/307/308)
+							local location = headers:match("Location: ([^\r\n]+)")
+							local status_code = headers:match("HTTP/%d+.%d+ (%d+)")
+							if
+								location
+								and (
+									status_code == "301"
+									or status_code == "302"
+									or status_code == "307"
+									or status_code == "308"
+								)
+							then
+								tcp:close()
+								return fetchBody(location)
+							end
+						end
+					else
+						body = body .. buff
 					end
-				else
-					body = body .. buff
 				end
+				if status == "closed" then
+					break
+				end
+				wait(0)
 			end
-			if status == "closed" then
-				break
-			end
-			wait(0)
+			tcp:close()
+			return body
 		end
-		tcp:close()
+
+		local body = fetchBody(file.url)
 
 		if body == "" then
 			callback("unknown")
@@ -1293,10 +1335,7 @@ end, function(self)
 		imgui.PushFont(font3)
 		if extra then
 			imgui.Text("By: " .. s(extra.author))
-			imgui.Text("Versión: " .. s(extra.version or "N/A"))
-		else
-			imgui.Text("By: N/A")
-			imgui.Text("Versión: N/A")
+			imgui.Text("Versión: " .. s(extra.version))
 		end
 		imgui.PopFont()
 		imgui.EndChild()
@@ -1308,13 +1347,13 @@ end, function(self)
 		imgui.PushStyleColor(imgui.Col.ChildBg, imgui.ImVec4(0.109, 0.106, 0.149, 1.0))
 		imgui.BeginChild("##techinfo", imgui.ImVec2(0, 180), false, imgui.WindowFlags.NoScrollbar)
 
-		imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.downloads))
+		imgui.Text(fa.DOWNLOAD .. " Descargas: " .. s(extra and extra.total_downloads))
 		imgui.Spacing()
-		imgui.Text(fa.CALENDAR .. " Released: " .. s(extra and extra.released))
+		imgui.Text(fa.CALENDAR .. " Publicado: " .. s(extra and extra.created))
 		imgui.Spacing()
-		imgui.Text(fa.ROTATE .. " Updated: " .. s(extra and extra.updated))
+		imgui.Text(fa.ROTATE .. " Actualizado: " .. s(extra and extra.last_update))
 		imgui.Spacing()
-		imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.version))
+		imgui.Text(fa.CODE_BRANCH .. " Versión: " .. s(extra and extra.latest_version))
 		imgui.Spacing()
 		if status == "checking" then
 			local avail = imgui.GetContentRegionAvail()
