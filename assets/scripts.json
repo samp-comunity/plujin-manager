@@ -6,7 +6,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/GamePatch.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamepatch.jpeg",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/gamepatch.jpeg",
       "tags": []
     },
     {
@@ -15,7 +15,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://github.com/samp-comunity/gamefixer/releases/download/v1.0.0/GameFixer.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/gamefixer.png",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/gamefixer.png",
       "tags": ["Legal", "Utilidad"],
       "total_downloads": 47,
       "created": "SEP 02 2025",
@@ -28,7 +28,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Keyboard.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/keyboard.png",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/keyboard.png",
       "tags": ["Legal"]
     },
     {
@@ -37,7 +37,7 @@
       "author": "",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/MinecraftHud.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/minecraft.jpg",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/minecraft.jpg",
       "tags": ["Legal"]
     },
     {
@@ -64,7 +64,7 @@
       "author": "MTG MODS",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/bind.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/bind.jpeg",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/bind.jpeg",
       "tags": ["Legal"]
     },
     {
@@ -73,7 +73,7 @@
       "author": "vxnzz",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Cipher.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/cipher.png",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/cipher.png",
       "tags": ["Cheat"]
     },
     {
@@ -82,7 +82,7 @@
       "author": "Mikano",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Commands_Helper.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/commands_helper.png",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/commands_helper.png",
       "tags": ["Legal"]
     },
     {
@@ -91,7 +91,7 @@
       "author": "hnnssy",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/HP_bar.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/hp_bar.png",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/hp_bar.png",
       "tags": ["Legal"]
     },
     {
@@ -100,7 +100,7 @@
       "author": "ADOLFSAMP",
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/ANTI-FCRASH.lua",
-      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/assets/icons/anti_fcrash.jpg",
+      "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/anti_fcrash.jpg",
       "tags": ["Legal"]
     }
   ]
