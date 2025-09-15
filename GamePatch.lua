@@ -62,7 +62,6 @@ local cfgData = cfgLoad(defaultCfg)
 
 local new = imgui.new
 local windowState = new.bool(false)
-local filters = new.bool(false)
 
 ---------------------- [FFI]----------------------
 ffi.cdef([[
@@ -70,7 +69,7 @@ ffi.cdef([[
 ]])
 
 -- ruta absoluta
-local basePath = getWorkingDirectory() .. "/resource"
+local basePath = getWorkingDirectory() .. "/resource/gamepatch"
 lfs.mkdir(basePath)
 lfs.mkdir(basePath .. "/icons")
 
@@ -299,6 +298,11 @@ lua_thread.create(function()
 	refreshRepoFiles()
 end)
 
+function clearStatusCache()
+	scriptStatusCache = {}
+end
+
+
 local installedPending = {}
 
 function downloadFile(url, filename, onFinish)
@@ -414,7 +418,7 @@ function loadScriptsInfo()
 
 					if not doesFileExist(localIcon) then
 						lua_thread.create(function()
-							downloadFile(mod.icon, "resource/icons/" .. mod.name .. ".png", function()
+							downloadFile(mod.icon, "resource/gamepatch/icons/" .. mod.name .. ".png", function()
 								table.insert(pendingTextures, { name = mod.name, path = localIcon })
 							end)
 						end)
@@ -490,12 +494,62 @@ function renderDownloaderUI()
 	imgui.SameLine()
 
 	if imgui.Button(fa.FILTER) then
-		filters[0] = not filters[0]
+		imgui.OpenPopup("##popup_tags")
 	end
 	imgui.SameLine()
 	if imgui.Button(" Actualizar lista") then
 		refreshRepoFiles()
 	end
+
+
+	imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(15, 15)) -- padding interno
+	if imgui.BeginPopupModal("##popup_tags", nil,
+	imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar) then
+		local windowSize = imgui.GetWindowSize()
+		
+
+		imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 0.843, 0.0, 1.0))
+		imgui.SetCursorPosY(5)
+		imgui.Text(" ") -- algo mínimo para ocupar línea
+		imgui.SameLine()
+		imgui.SetCursorPosX(imgui.GetWindowContentRegionMax().x - 40) -- margen derecho
+
+		-- correcto: botón que al clickear cierra el popup
+		if addons.CloseButton("##closemenu", showInfoWindow, 36, 15) then
+			imgui.CloseCurrentPopup()
+		end
+		imgui.PopStyleColor()
+
+
+		local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
+		imgui.PushStyleColor(imgui.Col.Text, bgColor)
+		imgui.PushFont(font1)
+		imgui.CenterText("Buscar filtros")
+		imgui.PopStyleColor()
+		imgui.PopFont()
+		imgui.PushFont(font2)
+		imgui.Spacing()
+
+		DrawTags()
+
+		
+		imgui.Spacing()
+		imgui.Separator()
+
+		local buttonSize = imgui.ImVec2(100, 30) -- ancho 100, alto 30
+
+		imgui.SetCursorPosX((windowSize.x - buttonSize.x) / 2)
+
+		if imgui.Button("OK", buttonSize) then
+			imgui.CloseCurrentPopup()
+		end
+
+		imgui.PopFont()
+
+		imgui.EndPopup()
+	end
+	imgui.PopStyleVar()
+
 
 	imgui.Separator()
 	imgui.NewLine()
@@ -1000,18 +1054,21 @@ function renderDownloaderUI()
 			end
 
 			imgui.Separator()
-			imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(0.0, 0.85, 0.45, 1.0))
-			imgui.Text("Reiniciar ahora")
-			if imgui.IsItemClicked(0) then
+
+			lua_thread.create(function()
+				-- Recargar los scripts
 				for _, filename in ipairs(installedPending) do
 					local path = getWorkingDirectory() .. "/" .. filename
 					script.load(path)
 				end
+
+				wait(5000)
+
 				installedPending = {}
 				showRestartPrompt = false
-			end
-			imgui.PopStyleColor()
+			end)
 		end
+
 		imgui.EndChild()
 	end
 end
@@ -1112,10 +1169,6 @@ function getScriptStatus(file)
 		end)
 	end
 	return scriptStatusCache[file.name]
-end
-
-function clearStatusCache()
-	scriptStatusCache = {}
 end
 
 function imgui.spinner(label, radius, thickness, color)
@@ -1855,39 +1908,6 @@ end, function(self)
 	renderDownloaderUI()
 	imgui.PopFont()
 
-	imgui.EndChild()
-	imgui.End()
-	imgui.PopStyleVar()
-end)
-
-local filtersFrame = imgui.OnFrame(function()
-	return filters[0]
-end, function(self)
-	imgui.SetNextWindowSize(imgui.ImVec2(222, 158), imgui.Cond.FirstUseEver)
-	imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(0, 0))
-	imgui.Begin("##filters", filters, imgui.WindowFlags.NoCollapse + imgui.WindowFlags.NoTitleBar)
-	local windowSize = imgui.GetWindowSize()
-
-	imgui.SetCursorPos(imgui.ImVec2(windowSize.x - 43, 10))
-	imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 1.0, 1.0, 1))
-	addons.CloseButton("##closemenu", filters, 33, 5)
-	imgui.PopStyleColor()
-
-	imgui.SetCursorPos(imgui.ImVec2(15, 15))
-	imgui.BeginChild("##settings_inner", imgui.ImVec2(windowSize.x - 30, windowSize.y - 30), false)
-
-	local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
-	imgui.PushStyleColor(imgui.Col.Text, bgColor)
-	imgui.PushFont(font1)
-	imgui.CenterText("Buscar filtros")
-	imgui.PopStyleColor()
-	imgui.PopFont()
-	imgui.PushFont(font2)
-	imgui.Spacing()
-
-	DrawTags()
-
-	imgui.PopFont()
 	imgui.EndChild()
 	imgui.End()
 	imgui.PopStyleVar()
