@@ -64,9 +64,9 @@ local new = imgui.new
 local windowState = new.bool(false)
 
 ---------------------- [FFI]----------------------
-ffi.cdef([[
+ffi.cdef[[
     void _Z12AND_OpenLinkPKc(const char* link);
-]])
+]]
 
 -- ruta absoluta
 local basePath = getWorkingDirectory() .. "/resource/gamepatch"
@@ -83,9 +83,7 @@ function main()
 		print("No renombres el mod")
 		thisScript():unload()
 	end
-	repeat
-		wait(0)
-	until isSampAvailable()
+	repeat wait(0) until isSampAvailable()
 
 	while true do
 		if isWidgetSwipedRight(WIDGET_RADAR) then
@@ -130,34 +128,36 @@ local scriptsInfo = {} -- datos extra desde scripts.json
 local showRestartPrompt = false
 local lastDownloaded = nil
 
--- 🔹 etiquetas iniciales (fallback mientras carga JSON)
-local etiquetas = {
-	["Cargando..."] = {
-		activo = false,
-		colorOff = imgui.ImVec4(0.3, 0.3, 0.3, 0.5),
-		colorOn = imgui.ImVec4(0.6, 0.6, 0.6, 0.9),
-	},
-}
+-- 📂 archivo externo con colores
+local tagCfgFile = basePath .. "/tags.json"
 
--- 🎨 paleta de colores por etiqueta
-local coloresEtiquetas = {
-	legal = {
-		off = imgui.ImVec4(0.2, 0.4, 0.8, 0.3), -- azul opaco
-		on = imgui.ImVec4(0.2, 0.6, 1.0, 0.9), -- azul brillante
-	},
-	utilidad = {
-		off = imgui.ImVec4(0.2, 0.6, 0.2, 0.3), -- verde opaco
-		on = imgui.ImVec4(0.2, 0.9, 0.2, 0.9), -- verde brillante
-	},
-	visual = {
-		off = imgui.ImVec4(0.5, 0.2, 0.7, 0.3), -- morado opaco
-		on = imgui.ImVec4(0.8, 0.4, 1.0, 0.9), -- morado brillante
-	},
-	sonido = {
-		off = imgui.ImVec4(0.6, 0.4, 0.2, 0.3), -- marrón opaco
-		on = imgui.ImVec4(1.0, 0.6, 0.2, 0.9), -- marrón brillante
-	},
-}
+-- Cargar colores desde JSON
+function loadTagColors()
+    local f = io.open(tagCfgFile, "r")
+    if f then
+        local content = f:read("*a")
+        f:close()
+        local data = json.decode(content)
+        if data then return data end
+    end
+    return {} -- fallback vacío
+end
+
+-- Convierte array {r,g,b,a} a ImVec4
+local function toImVec4(tbl)
+    return imgui.ImVec4(tbl[1], tbl[2], tbl[3], tbl[4])
+end
+
+-- Inicializamos coloresEtiquetas desde el JSON
+local coloresEtiquetas = {}
+local rawTagColors = loadTagColors()
+
+for nombre, colores in pairs(rawTagColors) do
+    coloresEtiquetas[string.lower(nombre)] = {
+        off = toImVec4(colores.off),
+        on  = toImVec4(colores.on)
+    }
+end
 
 function buildTags()
 	etiquetas = {}
@@ -193,42 +193,6 @@ function buildTags()
 			colorOff = imgui.ImVec4(0.3, 0.3, 0.3, 0.5),
 			colorOn = imgui.ImVec4(0.6, 0.6, 0.6, 0.9),
 		}
-	end
-end
-
-function DrawTags()
-	imgui.Text("Etiquetas")
-	imgui.Spacing()
-
-	local colorTextoOff = imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
-	local colorTextoOn = imgui.ImVec4(1, 1, 1, 1)
-
-	for nombre, data in pairs(etiquetas) do
-		if data.activo then
-			imgui.PushStyleColor(imgui.Col.Button, data.colorOn)
-			imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOn)
-			imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOn)
-			imgui.PushStyleColor(imgui.Col.Text, colorTextoOn)
-		else
-			imgui.PushStyleColor(imgui.Col.Button, data.colorOff)
-			imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOff)
-			imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOff)
-			imgui.PushStyleColor(imgui.Col.Text, colorTextoOff)
-		end
-
-		-- 🔹 Ajustar botón al tamaño del texto
-		local textSize = imgui.CalcTextSize(nombre)
-		local paddingX, paddingY = 20, 8
-		local buttonSize = imgui.ImVec2(textSize.x + paddingX, textSize.y + paddingY)
-
-		if imgui.Button(nombre, buttonSize) then
-			data.activo = not data.activo
-			lua_thread.create(function()
-				refreshRepoFiles()
-			end)
-		end
-		imgui.PopStyleColor(4)
-		imgui.SameLine()
 	end
 end
 
@@ -298,6 +262,7 @@ lua_thread.create(function()
 	refreshRepoFiles()
 end)
 
+local scriptStatusCache = {}
 function clearStatusCache()
 	scriptStatusCache = {}
 end
@@ -459,11 +424,26 @@ lua_thread.create(function()
 	end
 end)
 
--- renderDownloaderUI con cuadritos y botón "Descargar" en azul
-function renderDownloaderUI()
+function renderDownloaderUI(onlyInstalled)
 	imgui.Separator()
 
-	-- 🔹 Inicializar (arriba, donde cargas cfgData)
+	-- 🔹 Crear lista filtrada
+	local filesToShow = {}
+	for _, f in ipairs(repoFiles) do
+		local savePath = getWorkingDirectory() .. "/" .. f.name
+		local isInstalled = fileExists(savePath)
+
+		-- 🚫 Ocultar GamePatch.lua en pestaña Descargar
+		if f.name == "GamePatch.lua" and not onlyInstalled then
+			goto continue
+		end
+
+		if (not onlyInstalled) or (onlyInstalled and isInstalled) then
+			table.insert(filesToShow, f)
+		end
+
+		::continue::
+	end
 	viewMode = cfgData.viewMode or 1
 
 	-- 🔹 Función helper para dibujar botones de vista
@@ -493,36 +473,22 @@ function renderDownloaderUI()
 	DrawViewButton("btnVistaGrid", fa.TABLE_CELLS_LARGE, 2)
 	imgui.SameLine()
 
-	if imgui.Button(fa.FILTER) then
+	if imgui.Button(fa.FILTER, imgui.ImVec2(40, 40)) then
 		imgui.OpenPopup("##popup_tags")
 	end
 	imgui.SameLine()
-	if imgui.Button(" Actualizar lista") then
+	if imgui.Button(" Actualizar", imgui.ImVec2(150, 40)) then
 		refreshRepoFiles()
 	end
 
-
-	imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(15, 15)) -- padding interno
+	imgui.PushStyleColor(imgui.Col.PopupBg, imgui.ImVec4(0.153, 0.153, 0.212, 1.0))
+	imgui.PushStyleVarVec2(imgui.StyleVar.WindowPadding, imgui.ImVec2(15, 15))
 	if imgui.BeginPopupModal("##popup_tags", nil,
 	imgui.WindowFlags.AlwaysAutoResize + imgui.WindowFlags.NoTitleBar) then
-		local windowSize = imgui.GetWindowSize()
 		
+		local windowSize = imgui.GetWindowSize()
 
-		imgui.PushStyleColor(imgui.Col.Border, imgui.ImVec4(1.0, 0.843, 0.0, 1.0))
-		imgui.SetCursorPosY(5)
-		imgui.Text(" ") -- algo mínimo para ocupar línea
-		imgui.SameLine()
-		imgui.SetCursorPosX(imgui.GetWindowContentRegionMax().x - 40) -- margen derecho
-
-		-- correcto: botón que al clickear cierra el popup
-		if addons.CloseButton("##closemenu", showInfoWindow, 36, 15) then
-			imgui.CloseCurrentPopup()
-		end
-		imgui.PopStyleColor()
-
-
-		local bgColor = imgui.GetStyle().Colors[imgui.Col.ButtonActive]
-		imgui.PushStyleColor(imgui.Col.Text, bgColor)
+		imgui.PushStyleColor(imgui.Col.Text, imgui.ImVec4(1.0, 0.843, 0.0, 1.0))
 		imgui.PushFont(font1)
 		imgui.CenterText("Buscar filtros")
 		imgui.PopStyleColor()
@@ -530,13 +496,58 @@ function renderDownloaderUI()
 		imgui.PushFont(font2)
 		imgui.Spacing()
 
-		DrawTags()
+		imgui.Text("Etiquetas")
 
-		
+		local buttonSize = imgui.ImVec2(30, 25)
+		imgui.SameLine()
+		imgui.SetCursorPosX(imgui.GetWindowContentRegionMax().x - buttonSize.x)
+
+		if imgui.SmallButton(fa.TRASH_CAN .. "##clearTags") then
+			for _, data in pairs(etiquetas) do
+				data.activo = false
+			end
+			lua_thread.create(function()
+				refreshRepoFiles()
+			end)
+		end
+
 		imgui.Spacing()
-		imgui.Separator()
+		imgui.Spacing()
 
-		local buttonSize = imgui.ImVec2(100, 30) -- ancho 100, alto 30
+		local colorTextoOff = imgui.ImVec4(0.7, 0.7, 0.7, 1.0)
+		local colorTextoOn = imgui.ImVec4(1, 1, 1, 1)
+
+		for nombre, data in pairs(etiquetas) do
+			if data.activo then
+				imgui.PushStyleColor(imgui.Col.Button, data.colorOn)
+				imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOn)
+				imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOn)
+				imgui.PushStyleColor(imgui.Col.Text, colorTextoOn)
+			else
+				imgui.PushStyleColor(imgui.Col.Button, data.colorOff)
+				imgui.PushStyleColor(imgui.Col.ButtonHovered, data.colorOff)
+				imgui.PushStyleColor(imgui.Col.ButtonActive, data.colorOff)
+				imgui.PushStyleColor(imgui.Col.Text, colorTextoOff)
+			end
+
+			-- 🔹 Ajustar botón al tamaño del texto
+			local textSize = imgui.CalcTextSize(nombre)
+			local paddingX, paddingY = 20, 8
+			local buttonSize = imgui.ImVec2(textSize.x + paddingX, textSize.y + paddingY)
+
+			if imgui.Button(nombre, buttonSize) then
+				data.activo = not data.activo
+				lua_thread.create(function()
+					refreshRepoFiles()
+				end)
+			end
+			imgui.PopStyleColor(4)
+			imgui.SameLine()
+		end
+		imgui.NewLine()
+		imgui.Text("")
+
+		local buttonSize = imgui.ImVec2(100, 40)
 
 		imgui.SetCursorPosX((windowSize.x - buttonSize.x) / 2)
 
@@ -549,10 +560,19 @@ function renderDownloaderUI()
 		imgui.EndPopup()
 	end
 	imgui.PopStyleVar()
-
+	imgui.PopStyleColor()
 
 	imgui.Separator()
 	imgui.NewLine()
+
+	local childW = imgui.GetContentRegionAvail().x
+	local childH = 450
+	imgui.BeginChild(
+		"##view_container",
+		imgui.ImVec2(childW, childH),
+		false,
+		imgui.WindowFlags.NoScrollbar
+	)
 
 	if isRefreshing then
 		local winSize = imgui.GetWindowSize()
@@ -567,15 +587,6 @@ function renderDownloaderUI()
 		imgui.SetCursorPos(imgui.ImVec2(centerX, centerY))
 		imgui.spinner("##refreshspinner", spinnerSize, spinnerThickness, imgui.ImVec4(1, 1, 1, 1))
 	else
-		local childW = imgui.GetContentRegionAvail().x
-		local childH = 450
-		imgui.BeginChild(
-			"##view_container",
-			imgui.ImVec2(childW, childH),
-			false,
-			imgui.WindowFlags.NoScrollbar + imgui.WindowFlags.NoMove
-		)
-
 		-- proporciones
 		local leftW = childW * 0.1
 		local centerW = childW * 0.8
@@ -618,13 +629,13 @@ function renderDownloaderUI()
 		)
 		TouchScroll()
 		if viewMode == 1 then
-			local itemsPerPage = 6
-			local totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
+			local itemsPerPage = 8
+			local totalPages = math.max(1, math.ceil(#filesToShow / itemsPerPage))
 			local startIndex = (currentPage - 1) * itemsPerPage + 1
-			local endIndex = math.min(startIndex + itemsPerPage - 1, #repoFiles)
+			local endIndex = math.min(startIndex + itemsPerPage - 1, #filesToShow)
 
 			for i = startIndex, endIndex do
-				local f = repoFiles[i]
+				local f = filesToShow[i]
 				local extra = scriptsInfo[f.name]
 				local displayName = f.name:gsub("%.lua$", "")
 				local savePath = getWorkingDirectory() .. "/" .. f.name
@@ -804,13 +815,13 @@ function renderDownloaderUI()
 
 			-- Paginación
 			local itemsPerPage = maxCols * 2 -- mínimo 2 filas por página
-			local totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
-			local startIndex = (currentPage - 1) * itemsPerPage + 1
-			local endIndex = math.min(startIndex + itemsPerPage - 1, #repoFiles)
-
 			local col = 0
-			for i = startIndex, endIndex do
-				local f = repoFiles[i]
+		local totalPages = math.max(1, math.ceil(#filesToShow / itemsPerPage))
+local startIndex = (currentPage - 1) * itemsPerPage + 1
+local endIndex = math.min(startIndex + itemsPerPage - 1, #filesToShow)
+
+for i = startIndex, endIndex do
+    local f = filesToShow[i]
 
 				imgui.PushStyleColor(imgui.Col.ChildBg, imgui.ImVec4(0.153, 0.153, 0.212, 1.0))
 				imgui.BeginChild("##mod_" .. f.name, imgui.ImVec2(itemWidth, itemHeight), false)
@@ -983,12 +994,13 @@ function renderDownloaderUI()
 		imgui.SetCursorPos(imgui.ImVec2(offsetX, offsetY))
 
 		local totalPages = 1
-		if viewMode == 1 then
-			local itemsPerPage = 6
-			totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
-		elseif viewMode == 2 then
-			totalPages = math.max(1, math.ceil(#repoFiles / itemsPerPage))
-		end
+if viewMode == 1 then
+    local itemsPerPage = 6
+    totalPages = math.max(1, math.ceil(#filesToShow / itemsPerPage))
+elseif viewMode == 2 then
+    totalPages = math.max(1, math.ceil(#filesToShow / itemsPerPage))
+end
+
 
 		if currentPage < totalPages and (viewMode == 1 or viewMode == 2) then
 			if imgui.arrowButton("##next_page", btnSize, "right") then
@@ -1069,11 +1081,10 @@ function renderDownloaderUI()
 			end)
 		end
 
-		imgui.EndChild()
 	end
+	imgui.EndChild()
 end
 
-local scriptStatusCache = {}
 function checkScriptRemote(file, callback)
 	lua_thread.create(function()
 		local path = getWorkingDirectory() .. "/" .. file.name
@@ -1155,8 +1166,6 @@ function checkScriptRemote(file, callback)
 	end)
 end
 
--- cache
-local scriptStatusCache = {}
 
 function getScriptStatus(file)
 	if not file then
@@ -1847,6 +1856,9 @@ end, function(self)
 	imgui.EndChild()
 	imgui.End()
 end)
+
+local activeTab = 1
+
 local MainMenu = imgui.OnFrame(function()
 	return windowState[0]
 end, function(self)
@@ -1903,9 +1915,42 @@ end, function(self)
 	imgui.Spacing()
 	imgui.Spacing()
 
-	imgui.Text("Aquí puedes descargar archivos desde GitHub")
+	local function DrawTabButton(label, index, size)
+		if activeTab == index then
+			imgui.PushStyleColor(imgui.Col.Button, imgui.ImVec4(0.0, 0.45, 0.85, 1.0)) -- Azul activo
+			imgui.PushStyleColor(imgui.Col.ButtonHovered, imgui.ImVec4(0.0, 0.55, 1.0, 1.0))
+			imgui.PushStyleColor(imgui.Col.ButtonActive, imgui.ImVec4(0.0, 0.35, 0.7, 1.0))
+		end
 
-	renderDownloaderUI()
+		local clicked = imgui.Button(label, size)
+
+		if activeTab == index then
+			imgui.PopStyleColor(3)
+		end
+
+		if clicked then
+			activeTab = index
+		end
+	end
+
+	-- 🔹 Uso en tu ventana
+	DrawTabButton("Instalados", 1, imgui.ImVec2(180, 55))
+	imgui.SameLine()
+	DrawTabButton("🌐 Descargar", 2, imgui.ImVec2(180, 55))
+	imgui.SameLine()
+	DrawTabButton("Librerias", 3, imgui.ImVec2(180, 55))
+
+	-- 🔹 Ejemplo de contenido según tab
+	if activeTab == 1 then
+		imgui.Text("📦 Mods instalados")
+		renderDownloaderUI(true)
+	elseif activeTab == 2 then
+		imgui.Text("🌐 Descargar mods")
+		renderDownloaderUI(false)
+	elseif activeTab == 3 then
+		imgui.Text("📚 Librerías disponibles")
+	end
+
 	imgui.PopFont()
 
 	imgui.EndChild()
