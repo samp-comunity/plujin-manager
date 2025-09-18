@@ -42,7 +42,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/MinecraftHud.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/minecraft.jpg",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 1400000,
+      "created": "SEP 02 2022",
+      "last_update": "SEP 14 2022",
+      "latest_version": "v1.0.0"
     },
     {
       "name": "Script_Manager.lua",
@@ -51,7 +55,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Script_Manager.lua",
       "icon": "",
-      "tags": ["Legal", "Desarrollador"]
+      "tags": ["Legal", "Desarrollador"],
+      "total_downloads": 12450,
+      "created": "SEP 15 2025",
+      "last_update": "SEP 16 2025",
+      "latest_version": "v1.0.4"
     },
     {
       "name": "anims.lua",
@@ -60,7 +68,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/anims.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/main/assets/icons/anims.png",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 25000,
+      "created": "SEP 02 2024",
+      "last_update": "SEP 14 2024",
+      "latest_version": "v1.0.0"
     },
     {
       "name": "bind.lua",
