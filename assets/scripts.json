@@ -7,7 +7,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/master/GamePatch.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/gamepatch.jpg",
-      "tags": []
+      "tags": [],
+      "total_downloads": 845,
+      "created": "JAN 12 2023",
+      "last_update": "AUG 25 2025",
+      "latest_version": "v1.0.2"
     },
     {
       "name": "GameFixer.lua",
@@ -81,7 +85,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/bind.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/bind.jpeg",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 590,
+      "created": "OCT 22 2023",
+      "last_update": "JUL 11 2025",
+      "latest_version": "v1.0.1"
     },
     {
       "name": "Cipher.lua",
@@ -90,7 +98,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Cipher.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/cipher.png",
-      "tags": ["Cheat"]
+      "tags": ["Cheat"],
+      "total_downloads": 18320,
+      "created": "MAR 18 2024",
+      "last_update": "JUN 30 2025",
+      "latest_version": "v2.1.0"
     },
     {
       "name": "Commands_Helper.lua",
@@ -99,7 +111,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/Commands_Helper.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/commands_helper.png",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 7740,
+      "created": "DEC 09 2022",
+      "last_update": "SEP 01 2025",
+      "latest_version": "v1.0.3"
     },
     {
       "name": "HP_bar.lua",
@@ -108,7 +124,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/HP_bar.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/hp_bar.png",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 12000,
+      "created": "JUN 15 2023",
+      "last_update": "AUG 19 2025",
+      "latest_version": "v1.0.5"
     },
     {
       "name": "ANTI-FCRASH.lua",
@@ -117,7 +137,11 @@
       "downloads": 0,
       "url": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/master/scripts/ANTI-FCRASH.lua",
       "icon": "https://raw.githubusercontent.com/samp-comunity/plujin-manager/refs/heads/main/assets/icons/anti_fcrash.jpg",
-      "tags": ["Legal"]
+      "tags": ["Legal"],
+      "total_downloads": 22300,
+      "created": "FEB 04 2022",
+      "last_update": "MAY 10 2025",
+      "latest_version": "v1.2.0"
     }
   ]
 }
